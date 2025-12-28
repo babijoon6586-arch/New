@@ -42,7 +42,7 @@ let base=net/count;
 let t='';
 for(let i=1;i<=count;i++){
 let inst=base;
-if(i>1) inst+=base*percent*i*gap;
+if(i>=1) inst+=base*percent*i*gap;
 t+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
 }
 result.textContent=t;
