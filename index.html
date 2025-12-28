@@ -6,54 +6,93 @@
 <title>محاسبه اقساط</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
+
 <style>
 body{font-family:-apple-system;direction:rtl;background:#f5f5f5;margin:0}
 .container{padding:16px}
-input,button{width:100%;padding:12px;margin:6px 0;font-size:16px;border-radius:10px;border:1px solid #ccc}
+input,button{
+  width:100%;padding:12px;margin:6px 0;
+  font-size:16px;border-radius:10px;border:1px solid #ccc
+}
 button{background:#7b2cbf;color:#fff;border:none}
-.result{background:#fff;padding:10px;margin-top:10px;border-radius:10px;white-space:pre-line}
+.box{
+  background:#fff;padding:10px;margin-top:10px;
+  border-radius:10px;white-space:pre-line
+}
+.bold{font-weight:bold}
 </style>
 </head>
 <body>
+
 <div class="container">
-<input id="total" placeholder="مبلغ کل">
-<input id="cash" placeholder="نقدی">
-<input id="delivery" placeholder="تحویل">
-<input id="doc" placeholder="سند">
-<input id="count" placeholder="تعداد اقساط">
-<input id="gap" placeholder="فاصله اقساط (ماه)">
-<input id="percent" placeholder="درصد" disabled>
-<button onclick="calc()">محاسبه</button>
-<div class="result" id="result"></div>
+  <input class="money" id="total" placeholder="مبلغ کل">
+  <input class="money" id="cash" placeholder="نقدی">
+  <input class="money" id="delivery" placeholder="تحویل">
+  <input class="money" id="doc" placeholder="سند">
+  <input id="count" placeholder="تعداد اقساط">
+  <input id="gap" placeholder="فاصله اقساط (ماه)">
+  <input id="percent" placeholder="درصد" disabled>
+
+  <button onclick="calc()">محاسبه</button>
+
+  <div class="box bold" id="netBox"></div>
+  <div class="box" id="result"></div>
+  <div class="box bold" id="sumBox"></div>
 </div>
+
 <script>
+// جدا کردن سه‌رقمی
+function formatNumber(el){
+  let n = el.value.replace(/,/g,'');
+  if(isNaN(n)) return;
+  el.value = Number(n).toLocaleString();
+}
+document.querySelectorAll('.money').forEach(i=>{
+  i.addEventListener('blur',()=>formatNumber(i));
+});
+
+// حذف ویرگول برای محاسبه
+function val(id){
+  return Number(document.getElementById(id).value.replace(/,/g,'')) || 0;
+}
+
 function calc(){
-let total=+totalEl.value;
-let cash=+cashEl.value;
-let delivery=+deliveryEl.value;
-let doc=+docEl.value;
-let count=+countEl.value;
-let gap=+gapEl.value;
-let duration=count*gap;
-let percent=duration<=6?0.04:duration<=12?0.06:0.08;
-percentEl.value=(percent*100)+' %';
-let net=total-(cash+delivery+doc);
-let base=net/count;
-let t='';
-for(let i=1;i<=count;i++){
-let inst=base;
-if(i>=1) inst+=base*percent*i*gap;
-t+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
+  let total = val('total');
+  let cash = val('cash');
+  let delivery = val('delivery');
+  let doc = val('doc');
+  let count = Number(countEl.value);
+  let gap = Number(gapEl.value);
+
+  let duration = count * gap;
+  let percent = duration<=6 ? 0.04 : duration<=12 ? 0.06 : 0.08;
+  percentEl.value = (percent*100)+' %';
+
+  let net = total - (cash + delivery + doc);
+  netBox.textContent = 
+    'مبلغ قابل تقسیط: ' + net.toLocaleString() + ' تومان';
+
+  let base = net / count;
+  let text = '';
+  let sumInstallments = 0;
+
+  for(let i=1;i<=count;i++){
+    let inst = base;
+    if(i>=1) inst += base * percent * i * gap;
+    sumInstallments += inst;
+    text += `قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
+  }
+  result.textContent = text;
+
+  let totalPaid = sumInstallments + cash + delivery + doc;
+  sumBox.textContent =
+    'جمع کل پرداختی: ' + Math.round(totalPaid).toLocaleString() + ' تومان';
 }
-result.textContent=t;
-}
-const totalEl=document.getElementById('total');
-const cashEl=document.getElementById('cash');
-const deliveryEl=document.getElementById('delivery');
-const docEl=document.getElementById('doc');
+
 const countEl=document.getElementById('count');
 const gapEl=document.getElementById('gap');
 const percentEl=document.getElementById('percent');
 </script>
+
 </body>
 </html>
