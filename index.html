@@ -8,51 +8,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 
 <style>
-body{
-  font-family:-apple-system, Tahoma;
-  direction:rtl;
-  background:#eee;
-  margin:0;
-}
-.page{
-  background:#fff;
-  margin:10px auto;
-  padding:20px;
-  max-width:800px;
-}
-h2{text-align:center;margin-bottom:20px}
-
+body{font-family:-apple-system,Tahoma;direction:rtl;background:#eee;margin:0}
+.page{background:#fff;max-width:800px;margin:10px auto;padding:20px}
+h2{text-align:center}
 input,button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  font-size:15px;
-  border-radius:6px;
-  border:1px solid #ccc;
+  width:100%;padding:10px;margin:6px 0;
+  font-size:15px;border-radius:6px;border:1px solid #ccc
 }
 input[readonly]{background:#f3f3f3}
-button{
-  background:#7b2cbf;
-  color:#fff;
-  border:none;
-}
-
-.row{
-  display:flex;
-  gap:10px;
-}
-.row > div{flex:1}
-
-.box{
-  border:1px solid #ddd;
-  padding:10px;
-  margin-top:10px;
-  border-radius:6px;
-  white-space:pre-line;
-}
-
+button{background:#7b2cbf;color:#fff;border:none}
+.row{display:flex;gap:10px}
+.row>div{flex:1}
+.box{border:1px solid #ddd;padding:10px;margin-top:10px;border-radius:6px;white-space:pre-line}
 .bold{font-weight:bold}
-
 @media print{
   button{display:none}
   body{background:#fff}
@@ -63,10 +31,9 @@ button{
 <body>
 
 <div class="page">
-
 <h2>پیش فاکتور فروش</h2>
 
-<!-- محاسبه قیمت -->
+<!-- متراژ -->
 <div class="row">
   <div><input id="area" placeholder="متراژ (متر مربع)"></div>
   <div><input class="money" id="pricePerMeter" placeholder="قیمت هر متر"></div>
@@ -88,79 +55,88 @@ button{
   <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<input id="percent" placeholder="درصد" readonly>
+<input id="percent" placeholder="درصد (قابل تغییر دستی)">
 
 <button onclick="calc()">محاسبه اقساط</button>
-<button onclick="window.print()">🖨️ پرینت پیش فاکتور</button>
+<button onclick="window.print()">🖨️ پرینت</button>
 
 <div class="box bold" id="netBox"></div>
 <div class="box" id="result"></div>
+<div class="box bold" id="equalBox"></div>
 <div class="box bold" id="sumBox"></div>
 
 </div>
 
 <script>
-// جداکننده سه‌رقمی لحظه‌ای
-document.querySelectorAll('.money').forEach(input=>{
-  input.addEventListener('input',e=>{
+// سه‌رقمی حین تایپ
+document.querySelectorAll('.money').forEach(i=>{
+  i.addEventListener('input',e=>{
     let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
     if(v===''){e.target.value='';return;}
     e.target.value=Number(v).toLocaleString();
   });
 });
 
-// دریافت عدد
 function val(id){
   return Number(document.getElementById(id).value.replace(/,/g,''))||0;
 }
 
-// محاسبه مبلغ کل
-function calcTotal(){
-  let area=Number(areaEl.value)||0;
-  let price=val('pricePerMeter');
-  let total=area*price;
-  totalEl.value=total?total.toLocaleString():'';
-}
-areaEl=document.getElementById('area');
-pricePerMeterEl=document.getElementById('pricePerMeter');
-totalEl=document.getElementById('total');
-areaEl.addEventListener('input',calcTotal);
-pricePerMeterEl.addEventListener('input',calcTotal);
+// مبلغ کل
+areaEl=area;
+pricePerMeterEl=pricePerMeter;
+areaEl.oninput=pricePerMeterEl.oninput=()=>{
+  let t=(Number(areaEl.value)||0)*val('pricePerMeter');
+  total.value=t?t.toLocaleString():'';
+};
 
 function calc(){
-  let total=val('total');
+  let totalVal=val('total');
   let cash=val('cash');
   let delivery=val('delivery');
   let doc=val('doc');
   let count=Number(countEl.value);
   let gap=Number(gapEl.value);
+  let areaVal=Number(areaEl.value)||1;
 
-  let duration=count*gap;
-  let percent=duration<=6?0.04:duration<=12?0.06:0.08;
-  percentEl.value=(percent*100)+' %';
+  let percentInput=percentEl.value.replace('%','');
+  let percent;
+  if(percentInput){
+    percent=Number(percentInput)/100;
+  }else{
+    let duration=count*gap;
+    percent=duration<=6?0.04:duration<=12?0.06:0.08;
+    percentEl.value=(percent*100);
+  }
 
-  let net=total-(cash+delivery+doc);
+  let net=totalVal-(cash+delivery+doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
   let base=net/count;
-  let sumInstallments=0;
-  let text='';
+  let sumInst=0;
+  let txt='';
 
   for(let i=1;i<=count;i++){
     let inst=base;
-    if(i>=1) inst+=base*percent*i*gap;
-    sumInstallments+=inst;
-    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
+    if(i>1) inst+=base*percent*i*gap;
+    sumInst+=inst;
+    txt+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
   }
-  result.textContent=text;
+  result.textContent=txt;
 
-  let totalPaid=sumInstallments+cash+delivery+doc;
-  sumBox.textContent='جمع کل پرداختی: '+Math.round(totalPaid).toLocaleString()+' تومان';
+  let equalInst=sumInst/count;
+  equalBox.textContent='قسط مساوی (نمایشی): '+Math.round(equalInst).toLocaleString()+' تومان';
+
+  let totalPaid=sumInst+cash+delivery+doc;
+  let newPricePerMeter=totalPaid/areaVal;
+
+  sumBox.textContent=
+    'جمع کل پرداختی: '+Math.round(totalPaid).toLocaleString()+
+    ' تومان\nقیمت هر متر نهایی: '+Math.round(newPricePerMeter).toLocaleString()+' تومان';
 }
 
-const countEl=document.getElementById('count');
-const gapEl=document.getElementById('gap');
-const percentEl=document.getElementById('percent');
+const countEl=count;
+const gapEl=gap;
+const percentEl=percent;
 </script>
 
 </body>
