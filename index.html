@@ -34,7 +34,7 @@ function calc(){
 
   for(let i = 1; i <= count; i++){
     let inst = base;
-    if(i >= 1){
+    if(i > 1){
       inst += base * percent * i * gap;
     }
     sumInstallments += inst;
