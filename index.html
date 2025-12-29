@@ -1,60 +1,135 @@
-<script>
-function calc(){
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پیش فاکتور فروش</title>
 
-  const totalVal = num('total');
-  const cash = num('cash');
-  const delivery = num('delivery');
-  const doc = num('doc');
-
-  const count = Number(document.getElementById('count').value) || 1;
-  const gap = Number(document.getElementById('gap').value) || 1;
-  const areaVal = Number(document.getElementById('area').value) || 1;
-
-  // درصد دستی یا خودکار
-  let percentInput = document.getElementById('percent').value;
-  let percent;
-
-  if(percentInput){
-    percent = Number(percentInput) / 100;
-  }else{
-    let duration = count * gap;
-    percent = duration <= 6 ? 0.04 : duration <= 12 ? 0.06 : 0.08;
-    document.getElementById('percent').value = percent * 100;
-  }
-
-  // مبلغ قابل تقسیط
-  const net = totalVal - (cash + delivery + doc);
-  document.getElementById('netBox').textContent =
-    'مبلغ قابل تقسیط: ' + net.toLocaleString() + ' تومان';
-
-  const base = net / count;
-
-  let resultText = '';
-  let sumInstallments = 0;
-
-  for(let i = 1; i <= count; i++){
-    let inst = base;
-    if(i > 1){
-      inst += base * percent * i * gap;
-    }
-    sumInstallments += inst;
-    resultText += `قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
-  }
-
-  document.getElementById('result').textContent = resultText;
-
-  // قسط مساوی
-  const equalInstallment = sumInstallments / count;
-  document.getElementById('equalBox').textContent =
-    'قسط مساوی (نمایشی): ' +
-    Math.round(equalInstallment).toLocaleString() + ' تومان';
-
-  // جمع کل پرداختی
-  const totalPaid = sumInstallments + cash + delivery + doc;
-  const finalPricePerMeter = totalPaid / areaVal;
-
-  document.getElementById('sumBox').textContent =
-    'جمع کل پرداختی: ' + Math.round(totalPaid).toLocaleString() + ' تومان\n' +
-    'قیمت هر متر نهایی: ' + Math.round(finalPricePerMeter).toLocaleString() + ' تومان';
+<style>
+body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
+.page{background:#fff;max-width:800px;margin:10px auto;padding:20px}
+h2{text-align:center}
+input,button{
+  width:100%;padding:10px;margin:6px 0;
+  font-size:15px;border-radius:6px;border:1px solid #ccc
 }
+input[readonly]{background:#f3f3f3}
+button{background:#7b2cbf;color:#fff;border:none}
+.row{display:flex;gap:10px}
+.row>div{flex:1}
+.box{
+  border:1px solid #ddd;
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  white-space:pre-line
+}
+.bold{font-weight:bold}
+</style>
+</head>
+<body>
+
+<div class="page">
+<h2>پیش فاکتور فروش</h2>
+
+<div class="row">
+  <div><input id="area" placeholder="متراژ"></div>
+  <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
+</div>
+
+<input id="total" class="money" placeholder="مبلغ کل" readonly>
+
+<hr>
+
+<div class="row">
+  <div><input id="cash" class="money" placeholder="نقدی"></div>
+  <div><input id="delivery" class="money" placeholder="تحویل"></div>
+  <div><input id="doc" class="money" placeholder="سند"></div>
+</div>
+
+<div class="row">
+  <div><input id="count" placeholder="تعداد اقساط"></div>
+  <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
+</div>
+
+<input id="percent" placeholder="درصد (قابل تغییر دستی)">
+
+<button onclick="calc()">محاسبه</button>
+
+<div id="netBox" class="box bold"></div>
+<div id="result" class="box"></div>
+<div id="equalBox" class="box bold"></div>
+<div id="sumBox" class="box bold"></div>
+
+</div>
+
+<script>
+// سه رقمی حین تایپ
+document.querySelectorAll('.money').forEach(i=>{
+  i.addEventListener('input',e=>{
+    let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
+    e.target.value = v ? Number(v).toLocaleString() : '';
+  });
+});
+
+function num(id){
+  return Number(document.getElementById(id).value.replace(/,/g,'')) || 0;
+}
+
+// محاسبه مبلغ کل
+document.getElementById('area').addEventListener('input',calcTotal);
+document.getElementById('pricePerMeter').addEventListener('input',calcTotal);
+
+function calcTotal(){
+  let t = Number(area.value || 0) * num('pricePerMeter');
+  total.value = t ? t.toLocaleString() : '';
+}
+
+function calc(){
+  let totalVal = num('total');
+  let cash = num('cash');
+  let delivery = num('delivery');
+  let doc = num('doc');
+  let count = Number(countEl.value || 1);
+  let gap = Number(gapEl.value || 1);
+  let areaVal = Number(area.value || 1);
+
+  let percentVal = percent.value ? Number(percent.value)/100
+    : ((count*gap)<=6?0.04:(count*gap)<=12?0.06:0.08);
+
+  percent.value = percentVal * 100;
+
+  let net = totalVal - (cash + delivery + doc);
+  netBox.textContent = 'مبلغ قابل تقسیط: ' + net.toLocaleString() + ' تومان';
+
+  let base = net / count;
+  let sumInst = 0;
+  let text = '';
+
+  for(let i=1;i<=count;i++){
+    let inst = base + (i>=1 ? base * percentVal * i * gap : 0);
+    sumInst += inst;
+    text += `قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
+  }
+
+  result.textContent = text;
+
+  equalBox.textContent =
+    'قسط مساوی (نمایشی): ' +
+    Math.round(sumInst/count).toLocaleString() + ' تومان';
+
+  let totalPaid = sumInst + cash + delivery + doc;
+  sumBox.textContent =
+    'جمع کل پرداختی: ' + Math.round(totalPaid).toLocaleString() +
+    ' تومان\nقیمت هر متر نهایی: ' +
+    Math.round(totalPaid/areaVal).toLocaleString() + ' تومان';
+}
+
+const countEl=document.getElementById('count');
+const gapEl=document.getElementById('gap');
+const percent=document.getElementById('percent');
+const area=document.getElementById('area');
 </script>
+
+</body>
+</html>
