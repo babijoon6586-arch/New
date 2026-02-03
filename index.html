@@ -6,18 +6,8 @@
 <title>پیش فاکتور فروش</title>
 
 <style>
-body{
-  font-family:tahoma;
-  direction:rtl;
-  background:#eee;
-  margin:0
-}
-.page{
-  background:#fff;
-  max-width:800px;
-  margin:10px auto;
-  padding:20px
-}
+body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
+.page{background:#fff;max-width:800px;margin:10px auto;padding:20px}
 h2{text-align:center}
 
 .topbar{
@@ -37,16 +27,9 @@ input,button{
 }
 input[readonly]{background:#f3f3f3}
 
-button{
-  background:#7b2cbf;
-  color:#fff;
-  border:none
-}
+button{background:#7b2cbf;color:#fff;border:none}
 
-.row{
-  display:flex;
-  gap:10px
-}
+.row{display:flex;gap:10px}
 .row>div{flex:1}
 
 .box{
@@ -58,7 +41,6 @@ button{
 }
 .bold{font-weight:bold}
 
-/* پرینت */
 @media print{
   button,input,.hide-print{display:none}
   body{background:#fff}
@@ -80,29 +62,29 @@ button{
 <h2>پیش فاکتور فروش</h2>
 
 <div class="row hide-print">
-  <div><input id="area" placeholder="متراژ (متر مربع)"></div>
-  <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
+  <div><input id="area" placeholder="متراژ"></div>
+  <div><input id="pricePerMeter" class="money" inputmode="numeric" placeholder="قیمت هر متر"></div>
 </div>
 
 <input id="total" class="money hide-print" placeholder="مبلغ کل" readonly>
 
 <div class="row hide-print">
-  <div><input id="discountPercent" placeholder="درصد تخفیف"></div>
-  <div><input id="discountAmount" class="money" placeholder="مبلغ تخفیف"></div>
+  <div><input id="discountPercent" inputmode="numeric" placeholder="درصد تخفیف"></div>
+  <div><input id="discountAmount" class="money" inputmode="numeric" placeholder="مبلغ تخفیف"></div>
 </div>
 
 <div class="row hide-print">
-  <div><input id="cash" class="money" placeholder="نقدی"></div>
-  <div><input id="delivery" class="money" placeholder="تحویل"></div>
-  <div><input id="doc" class="money" placeholder="سند"></div>
+  <div><input id="cash" class="money" inputmode="numeric" placeholder="نقدی"></div>
+  <div><input id="delivery" class="money" inputmode="numeric" placeholder="تحویل"></div>
+  <div><input id="doc" class="money" inputmode="numeric" placeholder="سند"></div>
 </div>
 
 <div class="row hide-print">
-  <div><input id="count" placeholder="تعداد اقساط"></div>
-  <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
+  <div><input id="count" inputmode="numeric" placeholder="تعداد اقساط"></div>
+  <div><input id="gap" inputmode="numeric" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<input id="percent" class="hide-print" placeholder="درصد اقساط">
+<input id="percent" inputmode="numeric" class="hide-print" placeholder="درصد اقساط">
 
 <input id="startDate" type="date" class="hide-print">
 
@@ -111,7 +93,6 @@ button{
 
 <div id="equalBox" class="box bold"></div>
 
-<!-- مخصوص پرینت -->
 <div class="box print-only">
 تاریخ: <span id="pDate"></span><br>
 متراژ: <span id="pArea"></span> متر<br>
@@ -123,76 +104,66 @@ button{
 </div>
 
 <script>
-// ساعت و تاریخ شمسی
-function updateTime(){
-  const now=new Date();
-  time.textContent=now.toLocaleTimeString('fa-IR');
-  date.textContent=now.toLocaleDateString('fa-IR');
-}
-setInterval(updateTime,1000);updateTime();
+// تاریخ و ساعت شمسی
+setInterval(()=>{
+  const d=new Date();
+  time.textContent=d.toLocaleTimeString('fa-IR');
+  date.textContent=d.toLocaleDateString('fa-IR');
+},1000);
 
-// جداکننده سه‌رقمی حین تایپ (همه money)
-document.addEventListener('input',function(e){
+// 🔥 فرمت سه‌رقمی دستی (قطعی)
+function formatMoney(value){
+  value=value.replace(/,/g,'').replace(/\D/g,'');
+  return value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+document.addEventListener('input',e=>{
   if(!e.target.classList.contains('money')) return;
-  let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
-  e.target.value=v?Number(v).toLocaleString():'';
+  e.target.value=formatMoney(e.target.value);
 });
 
+// عدد خام
 function num(id){
-  const el=document.getElementById(id);
-  return el&&el.value?Number(el.value.replace(/,/g,'')):0;
+  return Number(
+    document.getElementById(id).value.replace(/,/g,'')
+  ) || 0;
 }
 
-// محاسبه مبلغ کل
-area.addEventListener('input',calcTotal);
-pricePerMeter.addEventListener('input',calcTotal);
-
-function calcTotal(){
-  const t=(Number(area.value)||0)*num('pricePerMeter');
-  total.value=t?t.toLocaleString():'';
-}
+// مبلغ کل
+area.oninput=pricePerMeter.oninput=()=>{
+  total.value=formatMoney(
+    (Number(area.value)||0)*num('pricePerMeter')+''
+  );
+};
 
 function calc(){
   let totalVal=num('total');
 
-  // تخفیف
   if(discountPercent.value)
     totalVal-=totalVal*(Number(discountPercent.value)/100);
   if(discountAmount.value)
     totalVal-=num('discountAmount');
 
-  const cash=num('cash'),
-        delivery=num('delivery'),
-        doc=num('doc');
+  const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
+  const cnt=Number(count.value)||1,gp=Number(gap.value)||1;
 
-  const cnt=Number(count.value)||1;
-  const gp=Number(gap.value)||1;
-  const areaVal=Number(area.value)||1;
-
-  let percentVal;
-  if(percent.value){
-    percentVal=Number(percent.value)/100;
-  }else{
-    const d=cnt*gp;
-    percentVal=d<=6?0.04:d<=12?0.06:0.08;
-    percent.value=percentVal*100;
-  }
+  let percentVal=percent.value?Number(percent.value)/100:
+    ((cnt*gp)<=6?0.04:(cnt*gp)<=12?0.06:0.08);
+  percent.value=percentVal*100;
 
   let net=totalVal-(cash+delivery+doc);
-  let base=net/cnt;
-  let sum=0;
+  let base=net/cnt,sum=0;
 
   for(let i>=1;i<=cnt;i++)
     sum+=base+(i>1?base*percentVal*i*gp:0);
 
-  const equal=Math.round(sum/cnt);
-  equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
+  let equal=Math.round(sum/cnt);
+  equalBox.textContent='قسط مساوی: '+formatMoney(equal+'')+' تومان';
 
-  // داده پرینت
   pDate.textContent=date.textContent;
-  pArea.textContent=areaVal;
-  pPrice.textContent=num('pricePerMeter').toLocaleString();
-  pInstallment.textContent=equal.toLocaleString();
+  pArea.textContent=area.value;
+  pPrice.textContent=formatMoney(num('pricePerMeter')+'');
+  pInstallment.textContent=formatMoney(equal+'');
   pStart.textContent=startDate.value||'-';
 }
 </script>
