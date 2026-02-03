@@ -7,7 +7,7 @@
 
 <style>
 body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
-.page{background:#fff;max-width:800px;margin:10px auto;padding:20px}
+.page{background:#fff;max-width:900px;margin:10px auto;padding:20px}
 h2{text-align:center}
 
 .topbar{
@@ -41,11 +41,11 @@ button{background:#7b2cbf;color:#fff;border:none}
 }
 .bold{font-weight:bold}
 
-.print-only{display:none}
-
 table{width:100%;border-collapse:collapse;margin-top:10px}
 table,th,td{border:1px solid #ddd}
 th,td{padding:6px;text-align:center}
+
+.print-only{display:none}
 
 @media print{
   button,.no-print{display:none}
@@ -101,20 +101,18 @@ th,td{padding:6px;text-align:center}
 <div id="result" class="box"></div>
 <div id="equalBox" class="box bold"></div>
 
-<div class="box print-only">
-تاریخ فاکتور: <span id="pInvoiceDate"></span><br>
-متراژ: <span id="pArea"></span> متر<br>
-قیمت هر متر: <span id="pPrice"></span> تومان<br>
-مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
-تخفیف درصدی: <span id="pDiscountPercent"></span><br>
-تخفیف مبلغی: <span id="pDiscountAmount"></span><br>
-مبلغ کل جدید (نقد+سند+تحویل+مجموع اقساط): <span id="pNewTotal"></span> تومان<br>
-قسط مساوی: <span id="pInstallment"></span> تومان<br>
-تاریخ شروع اقساط: <span id="pStart"></span><br>
+<!-- جدول اقساط در صفحه اصلی -->
+<div class="box">
+<h3>جزئیات اقساط</h3>
+<div>مبلغ کل جدید (نقد + سند + تحویل + مجموع اقساط): <span id="mainNewTotal"></span> تومان</div>
 <table>
-<thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
-<tbody id="pInstallmentsTable"></tbody>
-<tfoot><tr><th>جمع کل</th><th colspan="2" id="pTotalInstallments"></th></tr></tfoot>
+<thead>
+<tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr>
+</thead>
+<tbody id="mainInstallmentsTable"></tbody>
+<tfoot>
+<tr><th>جمع کل</th><th colspan="2" id="mainTotalInstallments"></th></tr>
+</tfoot>
 </table>
 </div>
 
@@ -143,22 +141,24 @@ area.oninput=pricePerMeter.oninput=()=>{
   total.value=t?t.toLocaleString():'';
 };
 
-function toJalali(dateStr){
-  if(!dateStr) return '-';
-  const g=new Date(dateStr);
-  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
+function toJalali(date){
+  const j=jalaali.toJalaali(date.getFullYear(), date.getMonth()+1, date.getDate());
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
-function addMonthsJalali(dateStr,months){
-  const g = new Date(dateStr);
-  g.setMonth(g.getMonth() + months);
-  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
-  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
+// افزودن ماه با حفظ روز
+function addMonthsFixedDay(date, months){
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + months);
+
+  // اگر ماه جدید روز کمتری دارد، به آخر ماه تغییر میکند
+  if(d.getDate() < day) d.setDate(day > 28 ? 28 : day);
+  return d;
 }
 
 function calc(){
-  const invoiceDate = new Date(); 
+  const invoiceDate = new Date(); // تاریخ فاکتور
 
   const totalVal=num('total');
   const discountP = Number(discountPercent.value) || 0;
@@ -182,35 +182,25 @@ function calc(){
   for(let i=1;i<=countVal;i++){
     let inst=base + (i>=1 ? base*percentVal*i*gapVal : 0);
     sum+=inst;
-    const instDate = addMonthsJalali(invoiceDate, i*gapVal);
-    installmentsTable.push({num:i, amount:Math.round(inst).toLocaleString(), date:instDate});
+    const instDate = addMonthsFixedDay(invoiceDate, i*gapVal);
+    installmentsTable.push({num:i, amount:Math.round(inst).toLocaleString(), date:toJalali(instDate)});
   }
 
   const equal=Math.round(sum/countVal);
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
-  // محاسبه مبلغ کل جدید
   const newTotal = cash + delivery + doc + Math.round(sum);
 
-  // پرینت
-  pInvoiceDate.textContent = toJalali(invoiceDate);
-  pArea.textContent = area.value;
-  pPrice.textContent = num('pricePerMeter').toLocaleString();
-  pTotalAfterDiscount.textContent = totalAfterDiscount.toLocaleString();
-  pDiscountPercent.textContent = discountP ? discountP+'%' : '-';
-  pDiscountAmount.textContent = discountA ? discountA.toLocaleString()+' تومان' : '-';
-  pNewTotal.textContent = newTotal.toLocaleString();
-  pInstallment.textContent = equal.toLocaleString();
-  pStart.textContent = addMonthsJalali(invoiceDate, gapVal);
-
-  const tbody = document.getElementById('pInstallmentsTable');
+  // نمایش در جدول اصلی
+  document.getElementById('mainNewTotal').textContent = newTotal.toLocaleString();
+  const tbody = document.getElementById('mainInstallmentsTable');
   tbody.innerHTML = '';
   installmentsTable.forEach(row=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${row.num}</td><td>${row.amount}</td><td>${row.date}</td>`;
     tbody.appendChild(tr);
   });
-  document.getElementById('pTotalInstallments').textContent = Math.round(sum).toLocaleString();
+  document.getElementById('mainTotalInstallments').textContent = Math.round(sum).toLocaleString();
 }
 </script>
 
