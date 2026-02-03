@@ -51,7 +51,6 @@ button{background:#7b2cbf;color:#fff;border:none}
 }
 </style>
 
-<!-- کتابخانه تاریخ شمسی -->
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 </head>
 
@@ -73,6 +72,12 @@ button{background:#7b2cbf;color:#fff;border:none}
 </div>
 
 <input id="total" class="money no-print" placeholder="مبلغ کل" readonly>
+
+<!-- تخفیف‌ها -->
+<div class="row no-print">
+  <div><input id="discountPercent" placeholder="تخفیف درصدی (%)" value="0"></div>
+  <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی" value="0"></div>
+</div>
 
 <!-- پرداخت -->
 <div class="row no-print">
@@ -100,6 +105,8 @@ button{background:#7b2cbf;color:#fff;border:none}
 <div class="box print-only">
 متراژ: <span id="pArea"></span> متر<br>
 قیمت هر متر: <span id="pPrice"></span> تومان<br>
+تخفیف درصدی: <span id="pDiscountPercent"></span> %<br>
+تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان<br>
 قسط مساوی: <span id="pInstallment"></span> تومان<br>
 تاریخ شروع اقساط: <span id="pStart"></span>
 </div>
@@ -153,6 +160,14 @@ function addMonthsJalali(dateStr,months){
 
 function calc(){
   const totalVal=num('total');
+
+  // تخفیف‌ها
+  const discountP = Number(discountPercent.value) || 0;
+  const discountA = num('discountAmount') || 0;
+
+  // کاهش تخفیف‌ها از کل
+  let totalAfterDiscount = totalVal - (totalVal*discountP/100) - discountA;
+
   const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
@@ -166,7 +181,7 @@ function calc(){
     percent.value=percentVal*100;
   }
 
-  const net=totalVal-(cash+delivery+doc);
+  const net=totalAfterDiscount-(cash+delivery+doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
   const base=net/countVal;
@@ -179,7 +194,6 @@ function calc(){
     sum+=inst;
 
     const instDate=addMonthsJalali(startDate.value,(i-1)*gapVal);
-
     text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
   }
 
@@ -189,10 +203,12 @@ function calc(){
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
   // پرینت
-  pArea.textContent=area.value;
-  pPrice.textContent=num('pricePerMeter').toLocaleString();
-  pInstallment.textContent=equal.toLocaleString();
-  pStart.textContent=toJalali(startDate.value);
+  pArea.textContent = area.value;
+  pPrice.textContent = num('pricePerMeter').toLocaleString();
+  pDiscountPercent.textContent = discountP.toLocaleString();
+  pDiscountAmount.textContent = discountA.toLocaleString();
+  pInstallment.textContent = equal.toLocaleString();
+  pStart.textContent = toJalali(startDate.value);
 }
 </script>
 
