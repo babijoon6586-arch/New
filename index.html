@@ -4,49 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>پیش فاکتور فروش</title>
-
 <style>
 body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
 .page{background:#fff;max-width:900px;margin:10px auto;padding:20px}
 h2{text-align:center}
-
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  font-size:14px;
-  margin-bottom:10px
-}
-
-input,button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  font-size:15px;
-  border-radius:6px;
-  border:1px solid #ccc
-}
+.topbar{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px}
+input,button{width:100%;padding:10px;margin:6px 0;font-size:15px;border-radius:6px;border:1px solid #ccc}
 input[readonly]{background:#f3f3f3}
-
 button{background:#7b2cbf;color:#fff;border:none}
-
 .row{display:flex;gap:10px}
 .row>div{flex:1}
-
-.box{
-  border:1px solid #ddd;
-  padding:10px;
-  margin-top:10px;
-  border-radius:6px;
-  white-space:pre-line
-}
+.box{border:1px solid #ddd;padding:10px;margin-top:10px;border-radius:6px;white-space:pre-line}
 .bold{font-weight:bold}
-
 table{width:100%;border-collapse:collapse;margin-top:10px}
 table,th,td{border:1px solid #ddd}
 th,td{padding:6px;text-align:center}
-
 .print-only{display:none}
-
 @media print{
   button,.no-print{display:none}
   .print-only{display:block}
@@ -54,10 +27,8 @@ th,td{padding:6px;text-align:center}
   .page{margin:0}
 }
 </style>
-
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 </head>
-
 <body>
 
 <div class="page">
@@ -93,7 +64,6 @@ th,td{padding:6px;text-align:center}
 </div>
 
 <input id="percent" class="no-print" placeholder="درصد اقساط (قابل تغییر)">
-
 <button onclick="calc()" class="no-print">محاسبه</button>
 <button onclick="window.print()" class="no-print">🖨️ پرینت</button>
 
@@ -101,10 +71,11 @@ th,td{padding:6px;text-align:center}
 <div id="result" class="box"></div>
 <div id="equalBox" class="box bold"></div>
 
-<!-- جدول اقساط در صفحه اصلی -->
 <div class="box">
 <h3>جزئیات اقساط</h3>
-<div>مبلغ کل جدید (نقد + سند + تحویل + مجموع اقساط): <span id="mainNewTotal"></span> تومان</div>
+<div>مبلغ کل اولیه: <span id="mainTotalInitial"></span> تومان</div>
+<div>مبلغ کل بعد از تخفیف: <span id="mainTotalAfterDiscount"></span> تومان</div>
+<div>مبلغ کل جدید (نقد+سند+تحویل+مجموع اقساط): <span id="mainNewTotal"></span> تومان</div>
 <table>
 <thead>
 <tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr>
@@ -141,63 +112,64 @@ area.oninput=pricePerMeter.oninput=()=>{
   total.value=t?t.toLocaleString():'';
 };
 
-function toJalali(date){
-  const j=jalaali.toJalaali(date.getFullYear(), date.getMonth()+1, date.getDate());
-  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
+function addMonthsJalaali(jy,jm,jd,months){
+  jm += months;
+  jy += Math.floor((jm-1)/12);
+  jm = ((jm-1)%12)+1;
+  // روز ثابت با رعایت تعداد روز ماه
+  const daysInMonth = jm<=6?31:(jm<=11?30:((jy%4===3)?30:29));
+  if(jd>daysInMonth) jd=daysInMonth;
+  return {jy,jm,jd};
 }
 
-// افزودن ماه با حفظ روز
-function addMonthsFixedDay(date, months){
-  const d = new Date(date.getTime());
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + months);
-
-  // اگر ماه جدید روز کمتری دارد، به آخر ماه تغییر میکند
-  if(d.getDate() < day) d.setDate(day > 28 ? 28 : day);
-  return d;
-}
+function toJalaliStr(jy,jm,jd){return `${jy}/${String(jm).padStart(2,'0')}/${String(jd).padStart(2,'0')}`;}
 
 function calc(){
-  const invoiceDate = new Date(); // تاریخ فاکتور
+  const areaVal = Number(area.value)||0;
+  const pricePerMeterVal = num('pricePerMeter');
+  const totalInitial = areaVal*pricePerMeterVal;
 
-  const totalVal=num('total');
-  const discountP = Number(discountPercent.value) || 0;
-  const discountA = num('discountAmount') || 0;
-
-  const totalAfterDiscount = totalVal - (totalVal*discountP/100) - discountA;
+  const discountP = Number(discountPercent.value)||0;
+  const discountA = num('discountAmount')||0;
+  const totalAfterDiscount = totalInitial - (totalInitial*discountP/100) - discountA;
 
   const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
+  const percentVal = percent.value ? Number(percent.value)/100 : ((countVal*gapVal)<=6?0.04:(countVal*gapVal)<=12?0.06:0.08);
 
-  let percentVal = percent.value ? Number(percent.value)/100 : ((countVal*gapVal)<=6?0.04:(countVal*gapVal)<=12?0.06:0.08);
-
-  const net=totalAfterDiscount-(cash+delivery+doc);
+  const net = totalAfterDiscount - (cash+delivery+doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
-  const base=net/countVal;
+  const base = net/countVal;
   let sum=0;
-  const installmentsTable = [];
 
+  const today = new Date();
+  let {jy,jm,jd} = jalaali.toJalaali(today.getFullYear(),today.getMonth()+1,today.getDate());
+
+  const installmentsTable=[];
   for(let i=1;i<=countVal;i++){
-    let inst=base + (i>=1 ? base*percentVal*i*gapVal : 0);
+    let inst=base + base*percentVal*i*gapVal;
     sum+=inst;
-    const instDate = addMonthsFixedDay(invoiceDate, i*gapVal);
-    installmentsTable.push({num:i, amount:Math.round(inst).toLocaleString(), date:toJalali(instDate)});
+
+    const newDate = addMonthsJalaali(jy,jm,jd,i*gapVal);
+    installmentsTable.push({num:i,amount:Math.round(inst).toLocaleString(),date:toJalaliStr(newDate.jy,newDate.jm,newDate.jd)});
   }
 
   const equal=Math.round(sum/countVal);
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
-  const newTotal = cash + delivery + doc + Math.round(sum);
+  const newTotal = cash+delivery+doc+Math.round(sum);
 
-  // نمایش در جدول اصلی
+  document.getElementById('mainTotalInitial').textContent = totalInitial.toLocaleString();
+  document.getElementById('mainTotalAfterDiscount').textContent = totalAfterDiscount.toLocaleString();
   document.getElementById('mainNewTotal').textContent = newTotal.toLocaleString();
+
   const tbody = document.getElementById('mainInstallmentsTable');
-  tbody.innerHTML = '';
+  tbody.innerHTML='';
   installmentsTable.forEach(row=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${row.num}</td><td>${row.amount}</td><td>${row.date}</td>`;
+    tr.innerHTML=`<td>${row.num}</td><td>${row.amount}</td><td>${row.date}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('mainTotalInstallments').textContent = Math.round(sum).toLocaleString();
