@@ -50,7 +50,11 @@ button{background:#7b2cbf;color:#fff;border:none}
   .page{margin:0}
 }
 </style>
+
+<!-- کتابخانه تاریخ شمسی -->
+<script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 </head>
+
 <body>
 
 <div class="page">
@@ -69,14 +73,6 @@ button{background:#7b2cbf;color:#fff;border:none}
 </div>
 
 <input id="total" class="money no-print" placeholder="مبلغ کل" readonly>
-
-<!-- تخفیف -->
-<div class="row no-print">
-  <div><input id="discountPercent" placeholder="درصد تخفیف"></div>
-  <div><input id="discountAmount" class="money" placeholder="مبلغ تخفیف"></div>
-</div>
-
-<hr class="no-print">
 
 <!-- پرداخت -->
 <div class="row no-print">
@@ -97,8 +93,8 @@ button{background:#7b2cbf;color:#fff;border:none}
 <button onclick="window.print()" class="no-print">🖨️ پرینت</button>
 
 <div id="netBox" class="box bold"></div>
+<div id="result" class="box"></div>
 <div id="equalBox" class="box bold"></div>
-<div id="sumBox" class="box bold"></div>
 
 <!-- پرینت -->
 <div class="box print-only">
@@ -111,18 +107,18 @@ button{background:#7b2cbf;color:#fff;border:none}
 </div>
 
 <script>
-// تاریخ و ساعت
+// تاریخ و ساعت شمسی
 setInterval(()=>{
   const d=new Date();
   time.textContent=d.toLocaleTimeString('fa-IR');
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// سه‌رقمی حین تایپ
+// جداکننده سه‌رقمی
 document.addEventListener('input',e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
-  e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g,",");
 });
 
 function num(id){
@@ -136,14 +132,27 @@ area.oninput=pricePerMeter.oninput=()=>{
   total.value=t?t.toLocaleString():'';
 };
 
+// تبدیل میلادی به شمسی
+function toJalali(dateStr){
+  if(!dateStr) return '-';
+  const g=new Date(dateStr);
+  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
+  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
+}
+
+// افزودن ماه به تاریخ شمسی
+function addMonthsJalali(dateStr,months){
+  const g=new Date(dateStr);
+  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
+  let jy=j.jy,jm=j.jm+months,jd=j.jd;
+  jy+=Math.floor((jm-1)/12);
+  jm=((jm-1)%12)+1;
+  const g2=jalaali.toGregorian(jy,jm,jd);
+  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
+}
+
 function calc(){
-  let totalVal=num('total');
-
-  if(discountPercent.value)
-    totalVal-=totalVal*(Number(discountPercent.value)/100);
-  if(discountAmount.value)
-    totalVal-=num('discountAmount');
-
+  const totalVal=num('total');
   const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
@@ -162,26 +171,28 @@ function calc(){
 
   const base=net/countVal;
   let sum=0;
+  let text='';
 
   for(let i=1;i<=countVal;i++){
     let inst=base;
     if(i>=1) inst+=base*percentVal*i*gapVal;
     sum+=inst;
+
+    const instDate=addMonthsJalali(startDate.value,(i-1)*gapVal);
+
+    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
   }
+
+  result.textContent=text;
 
   const equal=Math.round(sum/countVal);
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
-
-  const totalPaid=sum+cash+delivery+doc;
-  sumBox.textContent=
-    'جمع کل پرداختی: '+totalPaid.toLocaleString()+' تومان\n'+
-    'قیمت نهایی هر متر: '+Math.round(totalPaid/(Number(area.value)||1)).toLocaleString()+' تومان';
 
   // پرینت
   pArea.textContent=area.value;
   pPrice.textContent=num('pricePerMeter').toLocaleString();
   pInstallment.textContent=equal.toLocaleString();
-  pStart.textContent=startDate.value||'-';
+  pStart.textContent=toJalali(startDate.value);
 }
 </script>
 
