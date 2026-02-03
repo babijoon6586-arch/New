@@ -43,6 +43,10 @@ button{background:#7b2cbf;color:#fff;border:none}
 
 .print-only{display:none}
 
+table{width:100%;border-collapse:collapse;margin-top:10px}
+table,th,td{border:1px solid #ddd}
+th,td{padding:6px;text-align:center}
+
 @media print{
   button,.no-print{display:none}
   .print-only{display:block}
@@ -75,8 +79,8 @@ button{background:#7b2cbf;color:#fff;border:none}
 
 <!-- تخفیف‌ها -->
 <div class="row no-print">
-  <div><input id="discountPercent" placeholder="تخفیف درصدی (%)" value="0"></div>
-  <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی" value="0"></div>
+  <div><input id="discountPercent" placeholder="تخفیف درصدی (%)"></div>
+  <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی"></div>
 </div>
 
 <!-- پرداخت -->
@@ -92,7 +96,6 @@ button{background:#7b2cbf;color:#fff;border:none}
 </div>
 
 <input id="percent" class="no-print" placeholder="درصد اقساط (قابل تغییر)">
-<input id="startDate" type="date" class="no-print">
 
 <button onclick="calc()" class="no-print">محاسبه</button>
 <button onclick="window.print()" class="no-print">🖨️ پرینت</button>
@@ -103,12 +106,18 @@ button{background:#7b2cbf;color:#fff;border:none}
 
 <!-- پرینت -->
 <div class="box print-only">
+تاریخ فاکتور: <span id="pInvoiceDate"></span><br>
 متراژ: <span id="pArea"></span> متر<br>
 قیمت هر متر: <span id="pPrice"></span> تومان<br>
-تخفیف درصدی: <span id="pDiscountPercent"></span> %<br>
-تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان<br>
+مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
+تخفیف درصدی: <span id="pDiscountPercent"></span><br>
+تخفیف مبلغی: <span id="pDiscountAmount"></span><br>
 قسط مساوی: <span id="pInstallment"></span> تومان<br>
-تاریخ شروع اقساط: <span id="pStart"></span>
+تاریخ شروع اقساط: <span id="pStart"></span><br>
+<table>
+<thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
+<tbody id="pInstallmentsTable"></tbody>
+</table>
 </div>
 
 </div>
@@ -159,9 +168,11 @@ function addMonthsJalali(dateStr,months){
 }
 
 function calc(){
+  const invoiceDate = new Date(); // تاریخ فاکتور فعلی
+
   const totalVal=num('total');
 
-  // تخفیف‌ها
+  // تخفیف‌ها، اگر خالی بود صفر در نظر گرفته شود
   const discountP = Number(discountPercent.value) || 0;
   const discountA = num('discountAmount') || 0;
 
@@ -187,14 +198,18 @@ function calc(){
   const base=net/countVal;
   let sum=0;
   let text='';
+  const installmentsTable = [];
 
   for(let i=1;i<=countVal;i++){
     let inst=base;
     if(i>=1) inst+=base*percentVal*i*gapVal;
     sum+=inst;
 
-    const instDate=addMonthsJalali(startDate.value,(i-1)*gapVal);
+    // محاسبه تاریخ هر قسط با فاصله اقساط از تاریخ فاکتور
+    const instDate = addMonthsJalali(invoiceDate.toISOString().split('T')[0], i*gapVal);
+
     text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
+    installmentsTable.push({num:i, amount:Math.round(inst).toLocaleString(), date:instDate});
   }
 
   result.textContent=text;
@@ -203,12 +218,23 @@ function calc(){
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
   // پرینت
+  pInvoiceDate.textContent = toJalali(invoiceDate.toISOString().split('T')[0]);
   pArea.textContent = area.value;
   pPrice.textContent = num('pricePerMeter').toLocaleString();
-  pDiscountPercent.textContent = discountP.toLocaleString();
-  pDiscountAmount.textContent = discountA.toLocaleString();
+  pTotalAfterDiscount.textContent = totalAfterDiscount.toLocaleString();
+  pDiscountPercent.textContent = discountP ? discountP+'%' : '-';
+  pDiscountAmount.textContent = discountA ? discountA.toLocaleString()+' تومان' : '-';
   pInstallment.textContent = equal.toLocaleString();
-  pStart.textContent = toJalali(startDate.value);
+  pStart.textContent = addMonthsJalali(invoiceDate.toISOString().split('T')[0], gapVal); // تاریخ شروع اقساط
+
+  // جدول اقساط در پرینت
+  const tbody = document.getElementById('pInstallmentsTable');
+  tbody.innerHTML = '';
+  installmentsTable.forEach(row=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.num}</td><td>${row.amount}</td><td>${row.date}</td>`;
+    tbody.appendChild(tr);
+  });
 }
 </script>
 
