@@ -69,7 +69,6 @@ th,td{padding:6px;text-align:center}
 
 <h2>پیش فاکتور فروش</h2>
 
-<!-- متراژ -->
 <div class="row no-print">
   <div><input id="area" placeholder="متراژ"></div>
   <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
@@ -77,13 +76,11 @@ th,td{padding:6px;text-align:center}
 
 <input id="total" class="money no-print" placeholder="مبلغ کل" readonly>
 
-<!-- تخفیف‌ها -->
 <div class="row no-print">
   <div><input id="discountPercent" placeholder="تخفیف درصدی (%)"></div>
   <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی"></div>
 </div>
 
-<!-- پرداخت -->
 <div class="row no-print">
   <div><input id="cash" class="money" placeholder="نقدی"></div>
   <div><input id="delivery" class="money" placeholder="تحویل"></div>
@@ -104,7 +101,6 @@ th,td{padding:6px;text-align:center}
 <div id="result" class="box"></div>
 <div id="equalBox" class="box bold"></div>
 
-<!-- پرینت -->
 <div class="box print-only">
 تاریخ فاکتور: <span id="pInvoiceDate"></span><br>
 متراژ: <span id="pArea"></span> متر<br>
@@ -112,25 +108,25 @@ th,td{padding:6px;text-align:center}
 مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
 تخفیف درصدی: <span id="pDiscountPercent"></span><br>
 تخفیف مبلغی: <span id="pDiscountAmount"></span><br>
+مبلغ کل جدید (نقد+سند+تحویل+مجموع اقساط): <span id="pNewTotal"></span> تومان<br>
 قسط مساوی: <span id="pInstallment"></span> تومان<br>
 تاریخ شروع اقساط: <span id="pStart"></span><br>
 <table>
 <thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
 <tbody id="pInstallmentsTable"></tbody>
+<tfoot><tr><th>جمع کل</th><th colspan="2" id="pTotalInstallments"></th></tr></tfoot>
 </table>
 </div>
 
 </div>
 
 <script>
-// تاریخ و ساعت شمسی
 setInterval(()=>{
   const d=new Date();
   time.textContent=d.toLocaleTimeString('fa-IR');
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// جداکننده سه‌رقمی
 document.addEventListener('input',e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
@@ -142,13 +138,11 @@ function num(id){
   return el && el.value ? Number(el.value.replace(/,/g,''))||0 : 0;
 }
 
-// مبلغ کل
 area.oninput=pricePerMeter.oninput=()=>{
   const t=(Number(area.value)||0)*num('pricePerMeter');
   total.value=t?t.toLocaleString():'';
 };
 
-// تبدیل میلادی به شمسی
 function toJalali(dateStr){
   if(!dateStr) return '-';
   const g=new Date(dateStr);
@@ -156,78 +150,59 @@ function toJalali(dateStr){
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
-// افزودن ماه به تاریخ شمسی
 function addMonthsJalali(dateStr,months){
-  const g=new Date(dateStr);
+  const g = new Date(dateStr);
+  g.setMonth(g.getMonth() + months);
   const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
-  let jy=j.jy,jm=j.jm+months,jd=j.jd;
-  jy+=Math.floor((jm-1)/12);
-  jm=((jm-1)%12)+1;
-  const g2=jalaali.toGregorian(jy,jm,jd);
-  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
+  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
 function calc(){
-  const invoiceDate = new Date(); // تاریخ فاکتور فعلی
+  const invoiceDate = new Date(); 
 
   const totalVal=num('total');
-
-  // تخفیف‌ها، اگر خالی بود صفر در نظر گرفته شود
   const discountP = Number(discountPercent.value) || 0;
   const discountA = num('discountAmount') || 0;
 
-  // کاهش تخفیف‌ها از کل
-  let totalAfterDiscount = totalVal - (totalVal*discountP/100) - discountA;
+  const totalAfterDiscount = totalVal - (totalVal*discountP/100) - discountA;
 
   const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
-  let percentVal;
-  if(percent.value){
-    percentVal=Number(percent.value)/100;
-  }else{
-    const d=countVal*gapVal;
-    percentVal=d<=6?0.04:d<=12?0.06:0.08;
-    percent.value=percentVal*100;
-  }
+  let percentVal = percent.value ? Number(percent.value)/100 : ((countVal*gapVal)<=6?0.04:(countVal*gapVal)<=12?0.06:0.08);
 
   const net=totalAfterDiscount-(cash+delivery+doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
   const base=net/countVal;
   let sum=0;
-  let text='';
   const installmentsTable = [];
 
   for(let i=1;i<=countVal;i++){
-    let inst=base;
-    if(i>=1) inst+=base*percentVal*i*gapVal;
+    let inst=base + (i>=1 ? base*percentVal*i*gapVal : 0);
     sum+=inst;
-
-    // محاسبه تاریخ هر قسط با فاصله اقساط از تاریخ فاکتور
-    const instDate = addMonthsJalali(invoiceDate.toISOString().split('T')[0], i*gapVal);
-
-    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
+    const instDate = addMonthsJalali(invoiceDate, i*gapVal);
     installmentsTable.push({num:i, amount:Math.round(inst).toLocaleString(), date:instDate});
   }
-
-  result.textContent=text;
 
   const equal=Math.round(sum/countVal);
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
+  // محاسبه مبلغ کل جدید
+  const newTotal = cash + delivery + doc + Math.round(sum);
+
   // پرینت
-  pInvoiceDate.textContent = toJalali(invoiceDate.toISOString().split('T')[0]);
+  pInvoiceDate.textContent = toJalali(invoiceDate);
   pArea.textContent = area.value;
   pPrice.textContent = num('pricePerMeter').toLocaleString();
   pTotalAfterDiscount.textContent = totalAfterDiscount.toLocaleString();
   pDiscountPercent.textContent = discountP ? discountP+'%' : '-';
   pDiscountAmount.textContent = discountA ? discountA.toLocaleString()+' تومان' : '-';
+  pNewTotal.textContent = newTotal.toLocaleString();
   pInstallment.textContent = equal.toLocaleString();
-  pStart.textContent = addMonthsJalali(invoiceDate.toISOString().split('T')[0], gapVal); // تاریخ شروع اقساط
+  pStart.textContent = addMonthsJalali(invoiceDate, gapVal);
 
-  // جدول اقساط در پرینت
   const tbody = document.getElementById('pInstallmentsTable');
   tbody.innerHTML = '';
   installmentsTable.forEach(row=>{
@@ -235,6 +210,7 @@ function calc(){
     tr.innerHTML = `<td>${row.num}</td><td>${row.amount}</td><td>${row.date}</td>`;
     tbody.appendChild(tr);
   });
+  document.getElementById('pTotalInstallments').textContent = Math.round(sum).toLocaleString();
 }
 </script>
 
