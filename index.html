@@ -139,7 +139,7 @@ function addCash(){
  cashRows.innerHTML+=`
  <tr>
   <td><input class="money cashAmount"></td>
-  <td><input type="date"></td>
+  <td><input type="date" class="cashDate"></td>
   <td><button class="small-btn" onclick="this.closest('tr').remove()">✖</button></td>
  </tr>`;
 }
@@ -164,6 +164,13 @@ function addMonths(jy,jm,jd,m){
  let dim=daysInMonth(jy,jm);
  if(jd>dim)jd=dim;
  return `${jy}/${String(jm).padStart(2,'0')}/${String(jd).padStart(2,'0')}`;
+}
+
+function toJalali(dateStr){
+  if(!dateStr) return '-';
+  const g=new Date(dateStr);
+  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
+  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
 function calc(){
@@ -193,21 +200,23 @@ function calc(){
   let inst=Math.round(base);
   sum+=inst;
   let d=addMonths(j.jy,j.jm,j.jd,i*gapVal);
-  installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
-  pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
+  installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
+  pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
  }
 
  document.querySelectorAll('#cashRows tr').forEach(r=>{
   const m=r.querySelector('.cashAmount')?.value;
-  const d=r.querySelector('input[type=date]')?.value;
-  if(m)pCashRows.innerHTML+=`<tr><td>${m}</td><td>${d||'-'}</td></tr>`;
+  const d=r.querySelector('.cashDate')?.value;
+  if(m){
+    pCashRows.innerHTML+=`<tr><td>${m}</td><td>${toJalali(d)}</td></tr>`;
+  }
  });
 
  sumInstallments.textContent=sum.toLocaleString();
  summary.textContent=`مبلغ بعد از تخفیف: ${afterDiscount.toLocaleString()} تومان
 مبلغ کل جدید: ${(cashTotal+docVal+deliveryVal+sum).toLocaleString()} تومان`;
 
- pDate.textContent=date.textContent;
+ pDate.textContent=toJalali(now.toISOString().split('T')[0]);
  pInitial.textContent=totalInitial.toLocaleString();
  pAfterDiscount.textContent=afterDiscount.toLocaleString();
  pDoc.textContent=docVal.toLocaleString();
