@@ -41,8 +41,8 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 
 <!-- متراژ و قیمت هر متر -->
 <div class="row no-print">
-  <div><input id="area" type="number" min="0" placeholder="متراژ"></div>
-  <div><input id="pricePerMeter" class="money" type="number" min="0" placeholder="قیمت هر متر"></div>
+  <div><input id="area" type="text" inputmode="numeric" pattern="\d*" placeholder="متراژ"></div>
+  <div><input id="pricePerMeter" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="قیمت هر متر"></div>
 </div>
 
 <input id="total" class="money no-print" placeholder="مبلغ کل اولیه" readonly>
@@ -59,21 +59,21 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 </div>
 
 <div class="row no-print">
-  <div><input id="delivery" class="money" type="number" min="0" placeholder="تحویل"></div>
-  <div><input id="doc" class="money" type="number" min="0" placeholder="سند"></div>
+  <div><input id="delivery" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="تحویل"></div>
+  <div><input id="doc" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="سند"></div>
 </div>
 
 <div class="row no-print">
-  <div><input id="discountPercent" type="number" min="0" placeholder="تخفیف درصدی"></div>
-  <div><input id="discountAmount" class="money" type="number" min="0" placeholder="تخفیف مبلغی"></div>
+  <div><input id="discountPercent" type="text" inputmode="numeric" pattern="\d*" placeholder="تخفیف درصدی"></div>
+  <div><input id="discountAmount" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="تخفیف مبلغی"></div>
 </div>
 
 <div class="row no-print">
-  <div><input id="count" type="number" min="1" placeholder="تعداد اقساط"></div>
-  <div><input id="gap" type="number" min="1" placeholder="فاصله اقساط (ماه)"></div>
+  <div><input id="count" type="text" inputmode="numeric" pattern="\d*" placeholder="تعداد اقساط"></div>
+  <div><input id="gap" type="text" inputmode="numeric" pattern="\d*" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<input id="percent" class="no-print" type="number" min="0" placeholder="درصد اقساط (قابل تغییر)">
+<input id="percent" class="no-print" type="text" inputmode="numeric" pattern="\d*" placeholder="درصد اقساط (قابل تغییر)">
 <input id="startDate" type="date" class="no-print">
 
 <button onclick="calc()" class="no-print">محاسبه</button>
@@ -119,6 +119,7 @@ setInterval(()=>{
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
+// جداکننده سه‌رقمی هنگام خروج از فیلد (blur)
 document.addEventListener('input', e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
@@ -161,7 +162,7 @@ function addMonthsJalaliFixed(dateStr, months){
 
 function addCash(){
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input class="money cashAmount" type="number" min="0"></td>
+  row.innerHTML = `<td><input class="money cashAmount" type="text" inputmode="numeric" pattern="\d*"></td>
                    <td><input type="date" class="cashDate"></td>
                    <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>`;
   document.getElementById('cashRows').appendChild(row);
