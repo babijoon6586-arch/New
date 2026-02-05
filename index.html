@@ -46,6 +46,7 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 </div>
 
 <input id="total" class="money no-print" placeholder="مبلغ کل اولیه" readonly>
+<input id="totalAfterDiscount" class="money no-print" placeholder="مبلغ کل بعد از تخفیف" readonly>
 
 <!-- واریزهای نقدی -->
 <div class="box no-print">
@@ -76,8 +77,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <input id="percent" class="no-print" type="text" inputmode="numeric" pattern="\d*" placeholder="درصد اقساط (قابل تغییر)">
 <input id="startDate" type="date" class="no-print">
 
-<button onclick="calc()" class="no-print">محاسبه</button>
-<button onclick="window.print()" class="no-print">🖨️ پرینت</button>
+<div class="row no-print">
+  <div><button onclick="calc()">محاسبه</button></div>
+  <div><button onclick="resetAll()" style="background:#f00;">ریست</button></div>
+</div>
 
 <div id="netBox" class="box bold"></div>
 <div id="result" class="box"></div>
@@ -90,6 +93,7 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 متراژ: <span id="pArea"></span> متر<br>
 قیمت هر متر اولیه: <span id="pPrice"></span> تومان<br>
 مبلغ کل اولیه: <span id="pTotal"></span> تومان<br>
+مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
 تخفیف درصدی: <span id="pDiscountPercent"></span>%<br>
 تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان<br>
 سند: <span id="pDoc"></span> تومان<br>
@@ -112,14 +116,12 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 </div>
 
 <script>
-// تاریخ و ساعت شمسی
 setInterval(()=>{
   const d=new Date();
   time.textContent=d.toLocaleTimeString('fa-IR');
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// جداکننده سه‌رقمی هنگام خروج از فیلد (blur)
 document.addEventListener('input', e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
@@ -133,7 +135,6 @@ area.oninput=pricePerMeter.oninput=()=>{
   total.value=t?t.toLocaleString():'';
 }
 
-// تاریخ شمسی
 function toJalali(dateStr){
   if(!dateStr) return '-';
   const g=new Date(dateStr);
@@ -146,18 +147,17 @@ function isLeap(jy){
 }
 
 function addMonthsJalaliFixed(dateStr, months){
-  if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
-  const g = new Date(dateStr);
+  let g;
+  if(!dateStr) g = new Date();
+  else { g = new Date(dateStr+'T00:00'); }
   let j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
-  let jy = j.jy;
-  let jm = j.jm + months;
-  let jd = j.jd;
+  let jy = j.jy, jm = j.jm + months, jd = j.jd;
   jy += Math.floor((jm-1)/12);
   jm = ((jm-1)%12)+1;
   let daysInMonth = jm<=6?31:(jm<=11?30:(isLeap(jy)?30:29));
   if(jd>daysInMonth) jd=daysInMonth;
   const g2= jalaali.toGregorian(jy,jm,jd);
-  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
+  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toLocaleDateString('sv-SE'));
 }
 
 function addCash(){
@@ -176,6 +176,18 @@ function updateCashSum(){
   pCashSum.textContent=sum.toLocaleString();
 }
 
+// محاسبه لحظه‌ای درصد اقساط هنگام تغییر تعداد یا فاصله
+[count,gap].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    if(document.getElementById('percent').value.trim()===''){
+      const c = Number(count.value)||1;
+      const g = Number(gap.value)||1;
+      let val = (c*g<=6?0.04:c*g<=12?0.06:0.08);
+      document.getElementById('percent').value = (val*100).toLocaleString();
+    }
+  });
+});
+
 function calc(){
   const totalVal=num(total.value);
   const delivery=num('delivery'), doc=num('doc');
@@ -184,16 +196,19 @@ function calc(){
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
-  // درصد اقساط فقط وقتی خالی است محاسبه شود
   let percentVal;
-  if(percent.value) percentVal = num('percent')/100;
-  else percentVal = (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
-  percent.value=(percentVal*100).toLocaleString();
+  const percentInput=document.getElementById('percent');
+  if(percentInput.value.trim()===''){
+    percentVal = (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
+    percentInput.value=(percentVal*100).toLocaleString();
+  } else percentVal=num('percent')/100;
 
   let cashTotal=0;
   document.querySelectorAll('.cashAmount').forEach(i=>{ cashTotal+=num(i.value); });
 
   const afterDiscount = totalVal - (totalVal*discountPercent/100) - discountAmount;
+  totalAfterDiscount.value = afterDiscount.toLocaleString();
+
   const net = afterDiscount - (cashTotal + delivery + doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
@@ -221,6 +236,7 @@ function calc(){
   pArea.textContent=area.value;
   pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=totalVal.toLocaleString();
+  pTotalAfterDiscount.textContent=afterDiscount.toLocaleString();
   pDiscountPercent.textContent=discountPercent;
   pDiscountAmount.textContent=discountAmount.toLocaleString();
   pDoc.textContent=doc.toLocaleString();
@@ -242,6 +258,23 @@ function calc(){
     }
   });
   updateCashSum();
+}
+
+// ریست کامل
+function resetAll(){
+  document.querySelectorAll('input').forEach(i=>{
+    if(i.type!=='button') i.value='';
+  });
+  document.querySelectorAll('#cashRows tr').forEach(r=>r.remove());
+  cashSum.textContent='0';
+  netBox.textContent='';
+  result.textContent='';
+  equalBox.textContent='';
+  totalPaymentBox.textContent='';
+  newPriceBox.textContent='';
+  document.querySelectorAll('.print-only span, .print-only div').forEach(e=>{
+    e.textContent='';
+  });
 }
 </script>
 </body>
