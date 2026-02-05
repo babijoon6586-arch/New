@@ -115,12 +115,14 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 </div>
 
 <script>
+// به‌روزرسانی تاریخ و ساعت
 setInterval(()=>{
  const d=new Date();
  date.textContent=d.toLocaleDateString('fa-IR');
  time.textContent=d.toLocaleTimeString('fa-IR');
 },1000);
 
+// فرمت عدد با کاما
 document.addEventListener('input',e=>{
  if(!e.target.classList.contains('money'))return;
  let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
@@ -135,6 +137,7 @@ area.oninput=pricePerMeter.oninput=()=>{
  total.value=(Number(area.value||0)*num('pricePerMeter')).toLocaleString();
 };
 
+// افزودن ردیف واریز نقدی
 function addCash(){
  cashRows.innerHTML+=`
  <tr>
@@ -152,20 +155,7 @@ function getCashTotal(){
  return s;
 }
 
-function daysInMonth(jy,jm){
- if(jm<=6)return 31;
- if(jm<=11)return 30;
- return (jy%4===3)?30:29;
-}
-
-function addMonths(jy,jm,jd,m){
- jm+=m; jy+=Math.floor((jm-1)/12);
- jm=((jm-1)%12)+1;
- let dim=daysInMonth(jy,jm);
- if(jd>dim)jd=dim;
- return `${jy}/${String(jm).padStart(2,'0')}/${String(jd).padStart(2,'0')}`;
-}
-
+// تبدیل تاریخ میلادی به شمسی
 function toJalali(dateStr){
   if(!dateStr) return '-';
   const g=new Date(dateStr);
@@ -173,6 +163,7 @@ function toJalali(dateStr){
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
+// محاسبه اقساط و تاریخ‌ها
 function calc(){
  const totalInitial=Number(area.value||0)*num('pricePerMeter');
  const afterDiscount=totalInitial-
@@ -194,39 +185,44 @@ function calc(){
  let sum=0;
 
  const now=new Date();
- const j=jalaali.toJalaali(now.getFullYear(),now.getMonth()+1,now.getDate());
+ const startDay = now.getDate(); // روز ثابت
 
  for(let i=1;i<=countVal;i++){
-  let inst=Math.round(base);
-  sum+=inst;
+   let inst=Math.round(base);
+   sum+=inst;
 
-  // تاریخ قسط
-  let day = now.getDate(); // روز ثابت
-  let d = addMonths(j.jy, j.jm, day, i * gapVal); // ماه‌ها تغییر می‌کنند، روز ثابت می‌ماند
+   // محاسبه تاریخ قسط میلادی با روز ثابت
+   let gMonth = now.getMonth() + i*gapVal;
+   let gYear = now.getFullYear() + Math.floor(gMonth/12);
+   gMonth = gMonth % 12;
+   let gDate = new Date(gYear, gMonth, startDay);
 
-  installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
-  pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
+   let jDate = toJalali(gDate.toISOString().split('T')[0]);
+
+   installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${jDate}</td></tr>`;
+   pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${jDate}</td></tr>`;
  }
 
+ // واریزهای نقدی
  document.querySelectorAll('#cashRows tr').forEach(r=>{
-  const m=r.querySelector('.cashAmount')?.value;
-  const d=r.querySelector('.cashDate')?.value;
-  if(m){
-    pCashRows.innerHTML+=`<tr><td>${m}</td><td>${toJalali(d)}</td></tr>`;
-  }
+   const m=r.querySelector('.cashAmount')?.value;
+   const d=r.querySelector('.cashDate')?.value;
+   if(m && d){
+     pCashRows.innerHTML+=`<tr><td>${Number(m.replace(/,/g,'')).toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
+   }
  });
 
  sumInstallments.textContent=sum.toLocaleString();
  summary.textContent=`مبلغ بعد از تخفیف: ${afterDiscount.toLocaleString()} تومان
 مبلغ کل جدید: ${(cashTotal+docVal+deliveryVal+sum).toLocaleString()} تومان`;
 
- pDate.textContent=toJalali(now.toISOString().split('T')[0]);
- pInitial.textContent=totalInitial.toLocaleString();
- pAfterDiscount.textContent=afterDiscount.toLocaleString();
- pDoc.textContent=docVal.toLocaleString();
- pDelivery.textContent=deliveryVal.toLocaleString();
- pNewTotal.textContent=(cashTotal+docVal+deliveryVal+sum).toLocaleString();
- pSum.textContent=sum.toLocaleString();
+ pDate.textContent = toJalali(now.toISOString().split('T')[0]);
+ pInitial.textContent = totalInitial.toLocaleString();
+ pAfterDiscount.textContent = afterDiscount.toLocaleString();
+ pDoc.textContent = docVal.toLocaleString();
+ pDelivery.textContent = deliveryVal.toLocaleString();
+ pNewTotal.textContent = (cashTotal+docVal+deliveryVal+sum).toLocaleString();
+ pSum.textContent = sum.toLocaleString();
 }
 </script>
 
