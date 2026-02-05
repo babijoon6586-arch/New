@@ -19,11 +19,13 @@ button{background:#7b2cbf;color:#fff;border:none;cursor:pointer}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ddd;padding:6px;text-align:center}
 .print-only{display:none}
-.small-btn{background:#aaa;font-size:12px}
+.small-btn{background:#999;font-size:12px}
 
 @media print{
   .no-print{display:none}
   .print-only{display:block}
+  body{background:#fff}
+  .page{margin:0}
 }
 </style>
 
@@ -71,7 +73,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
   <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<button onclick="calc()" class="no-print">محاسبه</button>
+<div class="row no-print">
+  <div><button onclick="calc()">محاسبه</button></div>
+  <div><button onclick="window.print()">🖨️ پرینت</button></div>
+</div>
 
 <div id="summary" class="box bold"></div>
 
@@ -80,6 +85,32 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <tbody id="installments"></tbody>
 <tfoot><tr><th>جمع اقساط</th><th colspan="2" id="sumInstallments"></th></tr></tfoot>
 </table>
+
+<!-- ======= پرینت ======= -->
+<div class="print-only box">
+<h3>پیش فاکتور فروش</h3>
+
+<b>تاریخ فاکتور:</b> <span id="pDate"></span><br>
+<b>مبلغ کل اولیه:</b> <span id="pInitial"></span><br>
+<b>مبلغ بعد از تخفیف:</b> <span id="pAfterDiscount"></span><br>
+
+<h4>واریزهای نقدی</h4>
+<table>
+<thead><tr><th>مبلغ</th><th>تاریخ</th></tr></thead>
+<tbody id="pCashRows"></tbody>
+</table>
+
+<b>سند:</b> <span id="pDoc"></span><br>
+<b>تحویل:</b> <span id="pDelivery"></span><br>
+<b>مبلغ کل جدید:</b> <span id="pNewTotal"></span><br>
+
+<h4>اقساط</h4>
+<table>
+<thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
+<tbody id="pInstallments"></tbody>
+<tfoot><tr><th>جمع اقساط</th><th colspan="2" id="pSum"></th></tr></tfoot>
+</table>
+</div>
 
 </div>
 
@@ -141,12 +172,18 @@ function calc(){
   (totalInitial*(num('discountPercent')/100))-
   num('discountAmount');
 
- const net=afterDiscount-(getCashTotal()+num('doc')+num('delivery'));
+ const cashTotal=getCashTotal();
+ const docVal=num('doc');
+ const deliveryVal=num('delivery');
+
+ const net=afterDiscount-(cashTotal+docVal+deliveryVal);
  const countVal=Number(count.value)||1;
  const gapVal=Number(gap.value)||1;
  const base=net/countVal;
 
  installments.innerHTML='';
+ pInstallments.innerHTML='';
+ pCashRows.innerHTML='';
  let sum=0;
 
  const now=new Date();
@@ -157,11 +194,26 @@ function calc(){
   sum+=inst;
   let d=addMonths(j.jy,j.jm,j.jd,i*gapVal);
   installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
+  pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
  }
 
+ document.querySelectorAll('#cashRows tr').forEach(r=>{
+  const m=r.querySelector('.cashAmount')?.value;
+  const d=r.querySelector('input[type=date]')?.value;
+  if(m)pCashRows.innerHTML+=`<tr><td>${m}</td><td>${d||'-'}</td></tr>`;
+ });
+
  sumInstallments.textContent=sum.toLocaleString();
- summary.textContent=`مبلغ کل بعد از تخفیف: ${afterDiscount.toLocaleString()} تومان
-مبلغ قابل تقسیط: ${net.toLocaleString()} تومان`;
+ summary.textContent=`مبلغ بعد از تخفیف: ${afterDiscount.toLocaleString()} تومان
+مبلغ کل جدید: ${(cashTotal+docVal+deliveryVal+sum).toLocaleString()} تومان`;
+
+ pDate.textContent=date.textContent;
+ pInitial.textContent=totalInitial.toLocaleString();
+ pAfterDiscount.textContent=afterDiscount.toLocaleString();
+ pDoc.textContent=docVal.toLocaleString();
+ pDelivery.textContent=deliveryVal.toLocaleString();
+ pNewTotal.textContent=(cashTotal+docVal+deliveryVal+sum).toLocaleString();
+ pSum.textContent=sum.toLocaleString();
 }
 </script>
 
