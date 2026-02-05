@@ -7,25 +7,23 @@
 
 <style>
 body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
-.page{background:#fff;max-width:900px;margin:10px auto;padding:20px}
+.page{background:#fff;max-width:950px;margin:10px auto;padding:20px}
 h2{text-align:center}
 .topbar{display:flex;justify-content:space-between;font-size:14px}
-input,button{width:100%;padding:10px;margin:6px 0;font-size:14px;border-radius:6px;border:1px solid #ccc}
-input[readonly]{background:#f3f3f3}
-button{background:#7b2cbf;color:#fff;border:none}
+input,button{width:100%;padding:8px;margin:5px 0;font-size:14px;border-radius:6px;border:1px solid #ccc}
+button{background:#7b2cbf;color:#fff;border:none;cursor:pointer}
 .row{display:flex;gap:10px}
 .row>div{flex:1}
-.box{border:1px solid #ddd;padding:10px;margin-top:10px;border-radius:6px;white-space:pre-line}
+.box{border:1px solid #ddd;padding:10px;margin-top:10px;border-radius:6px}
 .bold{font-weight:bold}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ddd;padding:6px;text-align:center}
 .print-only{display:none}
+.small-btn{background:#999;font-size:12px}
 
 @media print{
   .no-print{display:none}
   .print-only{display:block}
-  body{background:#fff}
-  .page{margin:0}
 }
 </style>
 
@@ -51,12 +49,21 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <input id="total" class="money no-print" placeholder="مبلغ کل اولیه" readonly>
 
 <div class="row no-print">
-  <div><input id="discountPercent" placeholder="تخفیف درصدی (%)"></div>
+  <div><input id="discountPercent" placeholder="تخفیف درصدی"></div>
   <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی"></div>
 </div>
 
+<!-- واریز نقدی -->
+<div class="box no-print">
+<b>واریزهای نقدی</b>
+<table>
+<thead><tr><th>مبلغ</th><th>تاریخ</th><th></th></tr></thead>
+<tbody id="cashRows"></tbody>
+</table>
+<button onclick="addCash()">➕ افزودن واریز نقدی</button>
+</div>
+
 <div class="row no-print">
-  <div><input id="cash" class="money" placeholder="نقدی"></div>
   <div><input id="doc" class="money" placeholder="سند"></div>
   <div><input id="delivery" class="money" placeholder="تحویل"></div>
 </div>
@@ -73,25 +80,28 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <div id="summary" class="box bold"></div>
 
 <table>
-<thead>
-<tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr>
-</thead>
+<thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
 <tbody id="installments"></tbody>
-<tfoot>
-<tr><th>جمع اقساط</th><th colspan="2" id="sumInstallments"></th></tr>
-</tfoot>
+<tfoot><tr><th>جمع اقساط</th><th colspan="2" id="sumInstallments"></th></tr></tfoot>
 </table>
 
 <!-- پرینت -->
 <div class="box print-only">
-<b>تاریخ فاکتور:</b> <span id="pDate"></span><br>
+<h3>جزئیات پرداخت</h3>
 <b>مبلغ کل اولیه:</b> <span id="pInitial"></span><br>
 <b>مبلغ بعد از تخفیف:</b> <span id="pAfterDiscount"></span><br>
-<b>نقدی:</b> <span id="pCash"></span><br>
+
+<h4>واریزهای نقدی</h4>
+<table>
+<thead><tr><th>مبلغ</th><th>تاریخ</th></tr></thead>
+<tbody id="pCashRows"></tbody>
+</table>
+
 <b>سند:</b> <span id="pDoc"></span><br>
 <b>تحویل:</b> <span id="pDelivery"></span><br>
-<b>مبلغ کل جدید:</b> <span id="pNewTotal"></span><br><br>
+<b>مبلغ کل جدید:</b> <span id="pNewTotal"></span><br>
 
+<h4>اقساط</h4>
 <table>
 <thead><tr><th>قسط</th><th>مبلغ</th><th>تاریخ</th></tr></thead>
 <tbody id="pInstallments"></tbody>
@@ -114,17 +124,26 @@ document.addEventListener('input',e=>{
   e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g,",");
 });
 
-function num(id){
-  return Number((document.getElementById(id).value||'').replace(/,/g,''))||0;
+function addCash(){
+  cashRows.innerHTML+=`
+  <tr>
+    <td><input class="money cashAmount"></td>
+    <td><input type="date" class="cashDate"></td>
+    <td><button class="small-btn" onclick="this.closest('tr').remove()">✖</button></td>
+  </tr>`;
 }
 
-area.oninput=pricePerMeter.oninput=()=>{
-  total.value=(area.value*num('pricePerMeter')).toLocaleString();
-};
+function getCashTotal(){
+  let sum=0;
+  document.querySelectorAll('.cashAmount').forEach(i=>{
+    sum+=Number(i.value.replace(/,/g,''))||0;
+  });
+  return sum;
+}
 
 function daysInMonth(jy,jm){
-  if(jm<=6) return 31;
-  if(jm<=11) return 30;
+  if(jm<=6)return 31;
+  if(jm<=11)return 30;
   return (jy%4===3)?30:29;
 }
 
@@ -132,37 +151,35 @@ function addMonths(jy,jm,jd,m){
   jm+=m;
   jy+=Math.floor((jm-1)/12);
   jm=((jm-1)%12)+1;
-  const dim=daysInMonth(jy,jm);
-  if(jd>dim) jd=dim;
+  let dim=daysInMonth(jy,jm);
+  if(jd>dim)jd=dim;
   return `${jy}/${String(jm).padStart(2,'0')}/${String(jd).padStart(2,'0')}`;
 }
 
 function calc(){
-  const totalInitial=area.value*num('pricePerMeter');
-  const discountP=num('discountPercent');
-  const discountA=num('discountAmount');
-  const afterDiscount=totalInitial-(totalInitial*discountP/100)-discountA;
+  const totalInitial=area.value*pricePerMeter.value.replace(/,/g,'');
+  const afterDiscount=totalInitial
+    - (totalInitial*(Number(discountPercent.value)||0)/100)
+    - (Number(discountAmount.value.replace(/,/g,''))||0);
 
-  const cash=num('cash'),doc=num('doc'),delivery=num('delivery');
-  const countVal=Number(count.value)||1;
-  const gapVal=Number(gap.value)||1;
-  const percentVal=percent.value?Number(percent.value)/100:0;
+  const cashTotal=getCashTotal();
+  const doc=Number(doc.value.replace(/,/g,''))||0;
+  const delivery=Number(delivery.value.replace(/,/g,''))||0;
 
-  const net=afterDiscount-(cash+doc+delivery);
-  const base=net/countVal;
-
-  const now=new Date();
-  let j=jalaali.toJalaali(now.getFullYear(),now.getMonth()+1,now.getDate());
+  const net=afterDiscount-(cashTotal+doc+delivery);
+  const base=net/(Number(count.value)||1);
 
   let sum=0;
   installments.innerHTML='';
   pInstallments.innerHTML='';
 
-  for(let i=1;i<=countVal;i++){
-    let inst=Math.round(base+(base*percentVal*i*gapVal));
-    sum+=inst;
-    let d=addMonths(j.jy,j.jm,j.jd,i*gapVal);
+  const now=new Date();
+  const j=jalaali.toJalaali(now.getFullYear(),now.getMonth()+1,now.getDate());
 
+  for(let i=1;i<=count.value;i++){
+    let inst=Math.round(base);
+    sum+=inst;
+    let d=addMonths(j.jy,j.jm,j.jd,i*(Number(gap.value)||1));
     installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
     pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${d}</td></tr>`;
   }
@@ -170,17 +187,21 @@ function calc(){
   sumInstallments.textContent=sum.toLocaleString();
   pSum.textContent=sum.toLocaleString();
 
-  const newTotal=cash+doc+delivery+sum;
-  summary.textContent=`مبلغ بعد از تخفیف: ${afterDiscount.toLocaleString()} تومان
-مبلغ کل جدید: ${newTotal.toLocaleString()} تومان`;
+  summary.textContent=`مبلغ قابل تقسیط: ${net.toLocaleString()} تومان`;
 
-  pDate.textContent=date.textContent;
-  pInitial.textContent=totalInitial.toLocaleString();
-  pAfterDiscount.textContent=afterDiscount.toLocaleString();
-  pCash.textContent=cash.toLocaleString();
+  pInitial.textContent=Number(totalInitial).toLocaleString();
+  pAfterDiscount.textContent=Number(afterDiscount).toLocaleString();
   pDoc.textContent=doc.toLocaleString();
   pDelivery.textContent=delivery.toLocaleString();
-  pNewTotal.textContent=newTotal.toLocaleString();
+  pNewTotal.textContent=(cashTotal+doc+delivery+sum).toLocaleString();
+
+  pCashRows.innerHTML='';
+  document.querySelectorAll('#cashRows tr').forEach(r=>{
+    const m=r.querySelector('.cashAmount').value;
+    const d=r.querySelector('.cashDate').value;
+    if(m)
+      pCashRows.innerHTML+=`<tr><td>${m}</td><td>${d}</td></tr>`;
+  });
 }
 </script>
 
