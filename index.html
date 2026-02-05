@@ -21,10 +21,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 .print-only{display:none}
 .small-btn{background:#999;font-size:12px}
 @media print{
-  .no-print{display:none}
-  .print-only{display:block}
   body{background:#fff}
   .page{margin:0}
+  .no-print{display:none !important}
+  .print-only{display:block !important}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
@@ -82,11 +82,11 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
   <div><button onclick="window.print()">🖨️ پرینت</button></div>
 </div>
 
-<div id="netBox" class="box bold"></div>
-<div id="result" class="box"></div>
-<div id="equalBox" class="box bold"></div>
-<div id="totalPaymentBox" class="box bold"></div>
-<div id="newPriceBox" class="box bold"></div>
+<div id="netBox" class="box bold no-print"></div>
+<div id="result" class="box no-print"></div>
+<div id="equalBox" class="box bold no-print"></div>
+<div id="totalPaymentBox" class="box bold no-print"></div>
+<div id="newPriceBox" class="box bold no-print"></div>
 
 <!-- پرینت -->
 <div class="box print-only">
@@ -230,7 +230,7 @@ function calc(){
   const areaVal = num(area.value)||1;
   newPriceBox.textContent = 'قیمت هر متر جدید: '+Math.round(totalPayment/areaVal).toLocaleString()+' تومان';
 
-  // پرینت
+  // بروزرسانی پرینت
   pArea.textContent=area.value;
   pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=num(total.value).toLocaleString();
