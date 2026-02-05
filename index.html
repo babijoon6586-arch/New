@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>پیش فاکتور فروش</title>
-
 <style>
 body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
 .page{background:#fff;max-width:900px;margin:10px auto;padding:20px}
@@ -28,10 +27,8 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
   .page{margin:0}
 }
 </style>
-
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 </head>
-
 <body>
 <div class="page">
 
@@ -44,8 +41,8 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 
 <!-- متراژ و قیمت هر متر -->
 <div class="row no-print">
-  <div><input id="area" placeholder="متراژ"></div>
-  <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
+  <div><input id="area" type="number" min="0" placeholder="متراژ"></div>
+  <div><input id="pricePerMeter" class="money" type="number" min="0" placeholder="قیمت هر متر"></div>
 </div>
 
 <input id="total" class="money no-print" placeholder="مبلغ کل اولیه" readonly>
@@ -61,31 +58,27 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <b>جمع واریزهای نقدی:</b> <span id="cashSum">0</span> تومان
 </div>
 
-<!-- پرداخت‌های دیگر -->
 <div class="row no-print">
-  <div><input id="delivery" class="money" placeholder="تحویل"></div>
-  <div><input id="doc" class="money" placeholder="سند"></div>
+  <div><input id="delivery" class="money" type="number" min="0" placeholder="تحویل"></div>
+  <div><input id="doc" class="money" type="number" min="0" placeholder="سند"></div>
 </div>
 
-<!-- تخفیف -->
 <div class="row no-print">
-  <div><input id="discountPercent" placeholder="تخفیف درصدی"></div>
-  <div><input id="discountAmount" class="money" placeholder="تخفیف مبلغی"></div>
+  <div><input id="discountPercent" type="number" min="0" placeholder="تخفیف درصدی"></div>
+  <div><input id="discountAmount" class="money" type="number" min="0" placeholder="تخفیف مبلغی"></div>
 </div>
 
-<!-- اقساط -->
 <div class="row no-print">
-  <div><input id="count" placeholder="تعداد اقساط"></div>
-  <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
+  <div><input id="count" type="number" min="1" placeholder="تعداد اقساط"></div>
+  <div><input id="gap" type="number" min="1" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<input id="percent" class="no-print" placeholder="درصد اقساط (قابل تغییر)">
+<input id="percent" class="no-print" type="number" min="0" placeholder="درصد اقساط (قابل تغییر)">
 <input id="startDate" type="date" class="no-print">
 
 <button onclick="calc()" class="no-print">محاسبه</button>
 <button onclick="window.print()" class="no-print">🖨️ پرینت</button>
 
-<!-- نمایش نتایج -->
 <div id="netBox" class="box bold"></div>
 <div id="result" class="box"></div>
 <div id="equalBox" class="box bold"></div>
@@ -126,8 +119,7 @@ setInterval(()=>{
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// جداکننده سه‌رقمی
-document.addEventListener('input',e=>{
+document.addEventListener('input', e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
   e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -148,29 +140,34 @@ function toJalali(dateStr){
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
-// افزودن ماه بدون تغییر روز
-function addMonthsJalali(dateStr,months){
-  if(!dateStr) dateStr=new Date().toISOString().split('T')[0];
-  const g=new Date(dateStr);
-  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
-  let jy=j.jy,jm=j.jm+months,jd=j.jd;
-  jy+=Math.floor((jm-1)/12);
-  jm=((jm-1)%12)+1;
-  const g2=jalaali.toGregorian(jy,jm,jd);
-  return toJalali(new Date(g2.gy,g2.gm-1,jd).toISOString().split('T')[0]);
+function isLeap(jy){
+  return ((jy%33==1)||(jy%33==5)||(jy%33==9)||(jy%33==13)||(jy%33==17)||(jy%33==22)||(jy%33==26)||(jy%33==30));
 }
 
-// اضافه کردن ردیف نقدی
+function addMonthsJalaliFixed(dateStr, months){
+  if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
+  const g = new Date(dateStr);
+  let j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
+  let jy = j.jy;
+  let jm = j.jm + months;
+  let jd = j.jd;
+  jy += Math.floor((jm-1)/12);
+  jm = ((jm-1)%12)+1;
+  let daysInMonth = jm<=6?31:(jm<=11?30:(isLeap(jy)?30:29));
+  if(jd>daysInMonth) jd=daysInMonth;
+  const g2= jalaali.toGregorian(jy,jm,jd);
+  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
+}
+
 function addCash(){
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input class="money cashAmount"></td>
+  row.innerHTML = `<td><input class="money cashAmount" type="number" min="0"></td>
                    <td><input type="date" class="cashDate"></td>
                    <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>`;
   document.getElementById('cashRows').appendChild(row);
   row.querySelector('.cashAmount').addEventListener('input', updateCashSum);
 }
 
-// بروزرسانی جمع نقدی‌ها
 function updateCashSum(){
   let sum=0;
   document.querySelectorAll('.cashAmount').forEach(i=>{ sum+=num(i.value); });
@@ -186,10 +183,12 @@ function calc(){
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
-  let percentVal = percent.value ? num('percent')/100 : (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
+  // درصد اقساط فقط وقتی خالی است محاسبه شود
+  let percentVal;
+  if(percent.value) percentVal = num('percent')/100;
+  else percentVal = (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
   percent.value=(percentVal*100).toLocaleString();
 
-  // جمع نقدی‌ها
   let cashTotal=0;
   document.querySelectorAll('.cashAmount').forEach(i=>{ cashTotal+=num(i.value); });
 
@@ -205,7 +204,7 @@ function calc(){
     let inst=base;
     if(i>=1) inst+=base*percentVal*i*gapVal;
     sum+=inst;
-    const instDate=addMonthsJalali(start,(i-1)*gapVal);
+    const instDate=addMonthsJalaliFixed(start,(i-1)*gapVal);
     text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
   }
 
@@ -214,7 +213,6 @@ function calc(){
 
   const totalPayment = cashTotal + delivery + doc + sum;
   totalPaymentBox.textContent = 'مبلغ کل پرداختی: '+totalPayment.toLocaleString()+' تومان';
-
   const areaVal = num(area.value)||1;
   newPriceBox.textContent = 'قیمت هر متر جدید: '+Math.round(totalPayment/areaVal).toLocaleString()+' تومان';
 
@@ -233,7 +231,6 @@ function calc(){
   pTotalPayment.textContent = totalPayment.toLocaleString();
   pNewPrice.textContent = Math.round(totalPayment/areaVal).toLocaleString();
 
-  // واریزهای نقدی در پرینت
   const pCashBody = document.getElementById('pCashRows');
   pCashBody.innerHTML='';
   document.querySelectorAll('#cashRows tr').forEach(r=>{
@@ -246,6 +243,5 @@ function calc(){
   updateCashSum();
 }
 </script>
-
 </body>
 </html>
