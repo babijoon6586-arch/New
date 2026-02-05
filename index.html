@@ -43,7 +43,6 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 
 <h2>پیش فاکتور فروش</h2>
 
-<!-- متراژ -->
 <div class="row no-print">
   <div><input id="area" placeholder="متراژ"></div>
   <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
@@ -62,7 +61,6 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <b>جمع واریزهای نقدی:</b> <span id="cashSum">0</span> تومان
 </div>
 
-<!-- پرداخت‌های دیگر -->
 <div class="row no-print">
   <div><input id="delivery" class="money" placeholder="تحویل"></div>
   <div><input id="doc" class="money" placeholder="سند"></div>
@@ -112,49 +110,22 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 </div>
 
 <script>
-// تاریخ و ساعت شمسی
 setInterval(()=>{
   const d=new Date();
   time.textContent=d.toLocaleTimeString('fa-IR');
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// جداکننده سه‌رقمی
 document.addEventListener('input',e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
   e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g,",");
 });
 
-function num(id){
-  const el=document.getElementById(id);
-  return el && el.value ? Number(el.value.replace(/,/g,''))||0 : 0;
-}
-
-// مبلغ کل
+function num(val){ return Number((val||'').toString().replace(/,/g,''))||0; }
 area.oninput=pricePerMeter.oninput=()=>{
-  const t=(Number(area.value)||0)*num('pricePerMeter');
+  const t=(Number(area.value)||0)*num(pricePerMeter.value);
   total.value=t?t.toLocaleString():'';
-};
-
-// افزودن ردیف واریز نقدی
-function addCash(){
- cashRows.innerHTML+=`
- <tr>
-  <td><input class="money cashAmount"></td>
-  <td><input type="date" class="cashDate"></td>
-  <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>
- </tr>`;
-}
-
-// جمع واریز نقدی
-function updateCashSum(){
-  let sum=0;
-  document.querySelectorAll('.cashAmount').forEach(i=>{
-    sum+=Number(i.value.replace(/,/g,''))||0;
-  });
-  cashSum.textContent=sum.toLocaleString();
-  pCashSum.textContent=sum.toLocaleString();
 }
 
 // تبدیل میلادی به شمسی
@@ -165,9 +136,9 @@ function toJalali(dateStr){
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
-// افزودن ماه به تاریخ شمسی با روز ثابت
+// افزودن ماه با روز ثابت
 function addMonthsJalali(dateStr,months){
-  if(!dateStr) dateStr = new Date().toISOString().split('T')[0];
+  if(!dateStr) dateStr=new Date().toISOString().split('T')[0];
   const g=new Date(dateStr);
   const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
   let jy=j.jy,jm=j.jm+months,jd=j.jd;
@@ -177,62 +148,72 @@ function addMonthsJalali(dateStr,months){
   return toJalali(new Date(g2.gy,g2.gm-1,jd).toISOString().split('T')[0]);
 }
 
+// اضافه کردن ردیف جدید واریز نقدی
+function addCash(){
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input class="money cashAmount"></td>
+    <td><input type="date" class="cashDate"></td>
+    <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>`;
+  document.getElementById('cashRows').appendChild(row);
+  row.querySelector('.cashAmount').addEventListener('input', updateCashSum);
+}
+
+// بروزرسانی جمع نقدی‌ها
+function updateCashSum(){
+  let sum=0;
+  document.querySelectorAll('.cashAmount').forEach(i=>{
+    sum+=num(i.value);
+  });
+  cashSum.textContent=sum.toLocaleString();
+  pCashSum.textContent=sum.toLocaleString();
+}
+
+// محاسبه فاکتور و اقساط
 function calc(){
-  const totalVal=num('total');
-  const delivery=num('delivery'),doc=num('doc');
+  const totalVal=num(total.value);
+  const delivery=num('delivery'), doc=num('doc');
   const discountPercent=num('discountPercent')||0;
   const discountAmount=num('discountAmount')||0;
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
-  let percentVal;
-  if(percent.value){
-    percentVal=Number(percent.value)/100;
-  }else{
-    const d=countVal*gapVal;
-    percentVal=d<=6?0.04:d<=12?0.06:0.08;
-    percent.value=percentVal*100;
-  }
+  let percentVal = percent.value ? num('percent')/100 : (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
+  percent.value=(percentVal*100).toLocaleString();
 
-  // جمع واریز نقدی
+  // جمع نقدی‌ها
   let cashTotal=0;
-  document.querySelectorAll('.cashAmount').forEach(i=>{
-    cashTotal+=Number(i.value.replace(/,/g,''))||0;
-  });
+  document.querySelectorAll('.cashAmount').forEach(i=>{ cashTotal+=num(i.value); });
 
   const afterDiscount = totalVal - (totalVal*discountPercent/100) - discountAmount;
   const net = afterDiscount - (cashTotal + delivery + doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
-  const base = net / countVal;
-  let sum = 0;
-  let text = '';
-
+  const base = net/countVal;
+  let sum = 0, text='';
   const start = startDate.value || new Date().toISOString().split('T')[0];
 
   for(let i=1;i<=countVal;i++){
-    let inst = base;
-    if(i>=1) inst += base*percentVal*i*gapVal;
-    sum += inst;
-
-    const instDate = addMonthsJalali(start,(i-1)*gapVal);
-    text += `قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
+    let inst=base;
+    if(i>=1) inst+=base*percentVal*i*gapVal;
+    sum+=inst;
+    const instDate=addMonthsJalali(start,(i-1)*gapVal);
+    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
   }
 
   result.textContent=text;
-  const equal=Math.round(sum/countVal);
-  equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
+  equalBox.textContent='قسط مساوی: '+Math.round(sum/countVal).toLocaleString()+' تومان';
 
   // پرینت
   pArea.textContent=area.value;
-  pPrice.textContent=num('pricePerMeter').toLocaleString();
+  pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=totalVal.toLocaleString();
   pDiscountPercent.textContent=discountPercent;
   pDiscountAmount.textContent=discountAmount.toLocaleString();
   pDoc.textContent=doc.toLocaleString();
   pDelivery.textContent=delivery.toLocaleString();
   pNet.textContent=net.toLocaleString();
-  pInstallment.textContent=equal.toLocaleString();
+  pInstallment.textContent=Math.round(sum/countVal).toLocaleString();
   pStart.textContent=toJalali(start);
   pInstallmentsList.textContent=text;
 
@@ -243,10 +224,10 @@ function calc(){
     const m = r.querySelector('.cashAmount')?.value;
     const d = r.querySelector('.cashDate')?.value;
     if(m && d){
-      pCashBody.innerHTML += `<tr><td>${Number(m.replace(/,/g,'')).toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
+      pCashBody.innerHTML+=`<tr><td>${num(m).toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
     }
   });
-  pCashSum.textContent=cashTotal.toLocaleString();
+  updateCashSum();
 }
 </script>
 
