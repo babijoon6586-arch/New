@@ -22,9 +22,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 .small-btn{background:#999;font-size:12px}
 @media print{
   body{background:#fff}
-  .page{margin:0}
+  .page{margin:0;padding:10px;font-size:12px;line-height:1.2;}
   .no-print{display:none !important}
   .print-only{display:block !important}
+  .print-only, .print-only table, .print-only tr, .print-only td, .print-only th { page-break-inside: avoid; }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
@@ -140,14 +141,14 @@ document.addEventListener('input', e=>{
 // تبدیل مقدار به عدد
 function num(val){ return Number((val||'').toString().replace(/,/g,''))||0; }
 
-// محاسبه مبلغ کل اولیه
+// مبلغ کل اولیه
 area.oninput=pricePerMeter.oninput=()=>{
   const t=num(area.value)*num(pricePerMeter.value);
   total.value=t?t.toLocaleString():'';
   updateDiscountedTotal();
 }
 
-// محاسبه مبلغ کل بعد از تخفیف
+// مبلغ کل بعد از تخفیف
 function updateDiscountedTotal(){
   const totalVal = num(total.value);
   const discountPercentVal = num(discountPercent.value) || 0;
@@ -253,7 +254,7 @@ function calc(){
   const areaVal = num(area.value)||1;
   newPriceBox.textContent = 'قیمت هر متر جدید: '+Math.round(totalPayment/areaVal).toLocaleString()+' تومان';
 
-  // بروزرسانی پرینت
+  // پرینت
   pArea.textContent=area.value;
   pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=num(total.value).toLocaleString();
@@ -279,11 +280,9 @@ function calc(){
   updateCashSum();
 }
 
-// ریست کامل
+// ریست
 function resetAll(){
-  document.querySelectorAll('input').forEach(i=>{
-    if(i.type!=='button') i.value='';
-  });
+  document.querySelectorAll('input').forEach(i=>{ i.value=''; });
   document.querySelectorAll('#cashRows tr').forEach(r=>r.remove());
   cashSum.textContent='0';
   netBox.textContent='';
@@ -291,9 +290,7 @@ function resetAll(){
   equalBox.textContent='';
   totalPaymentBox.textContent='';
   newPriceBox.textContent='';
-  document.querySelectorAll('.print-only span, .print-only div').forEach(e=>{
-    e.textContent='';
-  });
+  document.querySelectorAll('.print-only span, .print-only div').forEach(e=>{ e.textContent=''; });
 }
 </script>
 </body>
