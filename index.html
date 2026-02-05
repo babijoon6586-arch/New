@@ -199,7 +199,11 @@ function calc(){
  for(let i=1;i<=countVal;i++){
   let inst=Math.round(base);
   sum+=inst;
-  let d=addMonths(j.jy,j.jm,j.jd,i*gapVal);
+
+  // تاریخ قسط
+  let day = now.getDate(); // روز ثابت
+  let d = addMonths(j.jy, j.jm, day, i * gapVal); // ماه‌ها تغییر می‌کنند، روز ثابت می‌ماند
+
   installments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
   pInstallments.innerHTML+=`<tr><td>${i}</td><td>${inst.toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
  }
