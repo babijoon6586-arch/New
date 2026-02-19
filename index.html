@@ -4,33 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>پیش فاکتور فروش</title>
+
 <style>
 body{font-family:tahoma;direction:rtl;background:#eee;margin:0}
-.page{background:#fff;max-width:900px;margin:10px auto;padding:20px}
+.page{background:#fff;max-width:800px;margin:10px auto;padding:20px}
 h2{text-align:center}
-.topbar{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px}
-input,button{width:100%;padding:10px;margin:6px 0;font-size:15px;border-radius:6px;border:1px solid #ccc}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  margin-bottom:10px
+}
+
+input,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  font-size:15px;
+  border-radius:6px;
+  border:1px solid #ccc
+}
 input[readonly]{background:#f3f3f3}
-button{background:#7b2cbf;color:#fff;border:none;cursor:pointer}
+
+button{background:#7b2cbf;color:#fff;border:none}
+
 .row{display:flex;gap:10px}
 .row>div{flex:1}
-.box{border:1px solid #ddd;padding:10px;margin-top:10px;border-radius:6px;white-space:pre-line}
+
+.box{
+  border:1px solid #ddd;
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  white-space:pre-line
+}
 .bold{font-weight:bold}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ddd;padding:6px;text-align:center}
+
 .print-only{display:none}
-.small-btn{background:#999;font-size:12px}
+
 @media print{
+  button,.no-print{display:none}
+  .print-only{display:block}
   body{background:#fff}
-  .page{margin:0;padding:10px;font-size:12px;line-height:1.2;}
-  .no-print{display:none !important}
-  .print-only{display:block !important}
-  .print-only, .print-only table, .print-only tr, .print-only td, .print-only th { page-break-inside: avoid; }
+  .page{margin:0}
 }
 </style>
+
 <script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 </head>
+
 <body>
+
 <div class="page">
 
 <div class="topbar">
@@ -40,85 +65,42 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 
 <h2>پیش فاکتور فروش</h2>
 
-<!-- متراژ و قیمت هر متر -->
 <div class="row no-print">
-  <div><input id="area" type="text" inputmode="numeric" pattern="\d*" placeholder="متراژ"></div>
-  <div><input id="pricePerMeter" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="قیمت هر متر"></div>
+  <div><input id="area" placeholder="متراژ"></div>
+  <div><input id="pricePerMeter" class="money" placeholder="قیمت هر متر"></div>
 </div>
 
-<input id="total" class="money no-print" placeholder="مبلغ کل اولیه" readonly>
+<input id="total" class="money no-print" placeholder="مبلغ کل" readonly>
 
-<!-- تخفیف -->
 <div class="row no-print">
-  <div><input id="discountPercent" type="text" inputmode="numeric" pattern="\d*" placeholder="تخفیف درصدی"></div>
-  <div><input id="discountAmount" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="تخفیف مبلغی"></div>
+  <div><input id="cash" class="money" placeholder="نقدی"></div>
+  <div><input id="delivery" class="money" placeholder="تحویل"></div>
+  <div><input id="doc" class="money" placeholder="سند"></div>
 </div>
 
-<input id="totalAfterDiscount" class="money no-print" placeholder="مبلغ کل بعد از تخفیف" readonly>
-
-<!-- واریز نقدی -->
-<div class="box no-print">
-<b>واریزهای نقدی</b>
-<table>
-<thead><tr><th>مبلغ</th><th>تاریخ</th><th></th></tr></thead>
-<tbody id="cashRows"></tbody>
-</table>
-<button onclick="addCash()">➕ افزودن واریز نقدی</button>
-<b>جمع واریزهای نقدی:</b> <span id="cashSum">0</span> تومان
-</div>
-
-<!-- تحویل و سند -->
 <div class="row no-print">
-  <div><input id="delivery" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="تحویل"></div>
-  <div><input id="doc" class="money" type="text" inputmode="numeric" pattern="\d*" placeholder="سند"></div>
+  <div><input id="count" placeholder="تعداد اقساط"></div>
+  <div><input id="gap" placeholder="فاصله اقساط (ماه)"></div>
 </div>
 
-<!-- تعداد اقساط و فاصله -->
-<div class="row no-print">
-  <div><input id="count" type="text" inputmode="numeric" pattern="\d*" placeholder="تعداد اقساط"></div>
-  <div><input id="gap" type="text" inputmode="numeric" pattern="\d*" placeholder="فاصله اقساط (ماه)"></div>
-</div>
+<input id="percent" class="no-print" placeholder="درصد اقساط (قابل تغییر)">
+<input id="startDate" type="date" class="no-print">
 
-<!-- درصد اقساط و تاریخ شروع -->
-<input id="percent" class="no-print" type="text" inputmode="numeric" pattern="\d*" placeholder="درصد اقساط (قابل تغییر)">
-<input id="startDate" type="date" class="no-print" placeholder="تاریخ شروع اقساط (روز ثابت هر ماه)">
-<div style="font-size:12px;color:#555;margin-top:-4px;margin-bottom:6px">
-تاریخ شروع اقساط: روزی که اقساط از آن شروع می‌شوند. روز انتخاب شده در ماه‌های بعد نیز ثابت خواهد بود.
-</div>
+<button onclick="calc()" class="no-print">محاسبه</button>
+<button onclick="window.print()" class="no-print">🖨️ پرینت</button>
 
-<!-- دکمه‌ها -->
-<div class="row no-print">
-  <div><button onclick="calc()">محاسبه</button></div>
-  <div><button onclick="resetAll()" style="background:#f00;">ریست</button></div>
-  <div><button onclick="window.print()">🖨️ پرینت</button></div>
-</div>
-
-<!-- خروجی‌ها -->
-<div id="netBox" class="box bold no-print"></div>
-<div id="result" class="box no-print"></div>
-<div id="equalBox" class="box bold no-print"></div>
-<div id="totalPaymentBox" class="box bold no-print"></div>
-<div id="newPriceBox" class="box bold no-print"></div>
+<div id="netBox" class="box bold"></div>
+<div id="result" class="box"></div>
+<div id="equalBox" class="box bold"></div>
 
 <!-- پرینت -->
 <div class="box print-only">
 متراژ: <span id="pArea"></span> متر<br>
 قیمت هر متر: <span id="pPrice"></span> تومان<br>
-مبلغ کل اولیه: <span id="pTotal"></span> تومان<br>
-تخفیف درصدی: <span id="pDiscountPercent"></span>%<br>
-تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان<br>
-مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
-<b>واریزهای نقدی:</b>
-<table>
-<thead><tr><th>مبلغ</th><th>تاریخ</th></tr></thead>
-<tbody id="pCashRows"></tbody>
-</table>
-تحویل: <span id="pDelivery"></span> تومان<br>
-سند: <span id="pDoc"></span> تومان<br>
-<b>لیست اقساط:</b>
-<div id="pInstallmentsList"></div>
-<b>مبلغ کل پرداختی:</b> <span id="pTotalPayment"></span> تومان<br>
-<b>قیمت هر متر جدید:</b> <span id="pNewPrice"></span> تومان
+قسط مساوی: <span id="pInstallment"></span> تومان<br>
+تاریخ شروع اقساط: <span id="pStart"></span>
+<hr>
+<div id="pInstallments"></div>
 </div>
 
 </div>
@@ -131,167 +113,90 @@ setInterval(()=>{
   date.textContent=d.toLocaleDateString('fa-IR');
 },1000);
 
-// فرمت اعداد
-document.addEventListener('input', e=>{
+// جداکننده سه‌رقمی
+document.addEventListener('input',e=>{
   if(!e.target.classList.contains('money')) return;
   let v=e.target.value.replace(/,/g,'').replace(/\D/g,'');
   e.target.value=v.replace(/\B(?=(\d{3})+(?!\d))/g,",");
 });
 
-// تبدیل مقدار به عدد
-function num(val){ return Number((val||'').toString().replace(/,/g,''))||0; }
+function num(id){
+  const el=document.getElementById(id);
+  return el && el.value ? Number(el.value.replace(/,/g,''))||0 : 0;
+}
 
-// مبلغ کل اولیه
+// مبلغ کل
 area.oninput=pricePerMeter.oninput=()=>{
-  const t=num(area.value)*num(pricePerMeter.value);
+  const t=(Number(area.value)||0)*num('pricePerMeter');
   total.value=t?t.toLocaleString():'';
-  updateDiscountedTotal();
-}
+};
 
-// مبلغ کل بعد از تخفیف
-function updateDiscountedTotal(){
-  const totalVal = num(total.value);
-  const discountPercentVal = num(discountPercent.value) || 0;
-  const discountAmountVal = num(discountAmount.value) || 0;
-  const afterDiscount = totalVal - (totalVal*discountPercentVal/100) - discountAmountVal;
-  totalAfterDiscount.value = afterDiscount ? afterDiscount.toLocaleString() : '';
-}
-
-discountPercent.addEventListener('input', updateDiscountedTotal);
-discountAmount.addEventListener('input', updateDiscountedTotal);
-
-// افزودن واریز نقدی
-function addCash(){
-  const row = document.createElement('tr');
-  row.innerHTML = `<td><input class="money cashAmount" type="text" inputmode="numeric" pattern="\d*"></td>
-                   <td><input type="date" class="cashDate"></td>
-                   <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>`;
-  document.getElementById('cashRows').appendChild(row);
-  row.querySelector('.cashAmount').addEventListener('input', updateCashSum);
-}
-
-// جمع واریزهای نقدی
-function updateCashSum(){
-  let sum=0;
-  document.querySelectorAll('.cashAmount').forEach(i=>{ sum+=num(i.value); });
-  cashSum.textContent=sum.toLocaleString();
-}
-
-// درصد اقساط خودکار
-[count,gap].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{
-    if(document.getElementById('percent').value.trim()===''){
-      const c = Number(count.value)||1;
-      const g = Number(gap.value)||1;
-      let val = (c*g<=6?0.04:c*g<=12?0.06:0.08);
-      document.getElementById('percent').value = (val*100).toLocaleString();
-    }
-  });
-});
-
-// تبدیل میلادی به شمسی
+// تبدیل به شمسی
 function toJalali(dateStr){
   if(!dateStr) return '-';
-  const g = new Date(dateStr);
-  const j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
+  const g=new Date(dateStr);
+  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
   return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
 }
 
-// بررسی کبیسه
-function isLeap(jy){return ((jy%33==1)||(jy%33==5)||(jy%33==9)||(jy%33==13)||(jy%33==17)||(jy%33==22)||(jy%33==26)||(jy%33==30));}
-
-// افزودن ماه با روز ثابت
-function addMonthsJalaliFixed(dateStr, months){
-  let g;
-  if(!dateStr) g = new Date();
-  else { g = new Date(dateStr+'T00:00'); }
-  let j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
-  let jy = j.jy, jm = j.jm + months, jd = j.jd;
-  jy += Math.floor((jm-1)/12);
-  jm = ((jm-1)%12)+1;
-  let daysInMonth = jm<=6?31:(jm<=11?30:(isLeap(jy)?30:29));
-  if(jd>daysInMonth) jd=daysInMonth;
-  const g2= jalaali.toGregorian(jy,jm,jd);
+// افزودن ماه
+function addMonthsJalali(dateStr,months){
+  const g=new Date(dateStr);
+  const j=jalaali.toJalaali(g.getFullYear(),g.getMonth()+1,g.getDate());
+  let jy=j.jy,jm=j.jm+months,jd=j.jd;
+  jy+=Math.floor((jm-1)/12);
+  jm=((jm-1)%12)+1;
+  const g2=jalaali.toGregorian(jy,jm,jd);
   return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
 }
 
-// محاسبه اصلی
 function calc(){
-  const totalVal = num(totalAfterDiscount.value);
-  const deliveryVal=num(document.getElementById('delivery').value);
-  const docVal=num(document.getElementById('doc').value);
+  const totalVal=num('total');
+  const cash=num('cash'),delivery=num('delivery'),doc=num('doc');
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
   let percentVal;
-  if(document.getElementById('percent').value.trim()===''){
-    percentVal = (countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
-    document.getElementById('percent').value = (percentVal*100).toLocaleString();
-  } else percentVal=num('percent')/100;
+  if(percent.value){
+    percentVal=Number(percent.value)/100;
+  }else{
+    const d=countVal*gapVal;
+    percentVal=d<=6?0.04:d<=12?0.06:0.08;
+    percent.value=percentVal*100;
+  }
 
-  let cashTotal=0;
-  document.querySelectorAll('.cashAmount').forEach(i=>{ cashTotal+=num(i.value); });
-
-  const net = totalVal - cashTotal - deliveryVal - docVal;
+  const net=totalVal-(cash+delivery+doc);
   netBox.textContent='مبلغ قابل تقسیط: '+net.toLocaleString()+' تومان';
 
-  let sum=0, text='';
-  const start = startDate.value || new Date().toISOString().split('T')[0];
+  const base=net/countVal;
+  let sum=0;
+  let text='';
+  let printText='';
 
   for(let i=1;i<=countVal;i++){
-    let inst=net/countVal;
-    if(i>=1) inst+=inst*percentVal*i*gapVal;
+    let inst=base;
+    if(i>1) inst+=base*percentVal*i*gapVal;
     sum+=inst;
-    const instDate=addMonthsJalaliFixed(start,(i-1)*gapVal);
+
+    const instDate=addMonthsJalali(startDate.value,(i-1)*gapVal);
+
     text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
+    printText+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — ${instDate}<br>`;
   }
 
   result.textContent=text;
-  equalBox.textContent='قسط مساوی: '+Math.round(sum/countVal).toLocaleString()+' تومان';
 
-  const totalPayment = cashTotal + deliveryVal + docVal + sum;
-  totalPaymentBox.textContent = 'مبلغ کل پرداختی: '+totalPayment.toLocaleString()+' تومان';
-  const areaVal = num(area.value)||1;
-  newPriceBox.textContent = 'قیمت هر متر جدید: '+Math.round(totalPayment/areaVal).toLocaleString()+' تومان';
+  const equal=Math.round(sum/countVal);
+  equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
 
   // پرینت
   pArea.textContent=area.value;
-  pPrice.textContent=num(pricePerMeter.value).toLocaleString();
-  pTotal.textContent=num(total.value).toLocaleString();
-  pTotalAfterDiscount.textContent=num(totalAfterDiscount.value).toLocaleString();
-  pDiscountPercent.textContent=num(discountPercent.value);
-  pDiscountAmount.textContent=num(discountAmount.value).toLocaleString();
-  pDoc.textContent = docVal.toLocaleString();
-  pDelivery.textContent = deliveryVal.toLocaleString();
-  pInstallmentsList.textContent=text;
-
-  const pCashBody = document.getElementById('pCashRows');
-  pCashBody.innerHTML='';
-  document.querySelectorAll('#cashRows tr').forEach(r=>{
-    const m = r.querySelector('.cashAmount')?.value;
-    const d = r.querySelector('.cashDate')?.value;
-    if(m && d){
-      pCashBody.innerHTML+=`<tr><td>${num(m).toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
-    }
-  });
-
-  pTotalPayment.textContent = totalPayment.toLocaleString();
-  pNewPrice.textContent = Math.round(totalPayment/areaVal).toLocaleString();
-  updateCashSum();
-}
-
-// ریست
-function resetAll(){
-  document.querySelectorAll('input').forEach(i=>{ i.value=''; });
-  document.querySelectorAll('#cashRows tr').forEach(r=>r.remove());
-  cashSum.textContent='0';
-  netBox.textContent='';
-  result.textContent='';
-  equalBox.textContent='';
-  totalPaymentBox.textContent='';
-  newPriceBox.textContent='';
-  document.querySelectorAll('.print-only span, .print-only div').forEach(e=>{ e.textContent=''; });
+  pPrice.textContent=num('pricePerMeter').toLocaleString();
+  pInstallment.textContent=equal.toLocaleString();
+  pStart.textContent=toJalali(startDate.value);
+  pInstallments.innerHTML=printText;
 }
 </script>
+
 </body>
 </html>
