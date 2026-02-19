@@ -77,6 +77,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <input id="percent" class="no-print" type="text" inputmode="numeric" pattern="\d*" placeholder="درصد اقساط (قابل تغییر)">
 <input id="startDate" type="date" class="no-print">
 
+<div style="font-size:12px;color:#555;margin-top:-4px;margin-bottom:6px">
+تاریخ شروع اقساط: روزی که اقساط از آن شروع می‌شوند. روز انتخاب شده در ماه‌های بعد نیز ثابت خواهد بود.
+</div>
+
 <div class="row no-print">
   <div><button onclick="calc()">محاسبه</button></div>
   <div><button onclick="resetAll()" style="background:#f00;">ریست</button></div>
@@ -115,27 +119,76 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <b>قیمت هر متر جدید:</b> <span id="pNewPrice"></span> تومان
 </div>
 
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 <script>
+// ساعت و تاریخ
+setInterval(()=>{
+  const d=new Date();
+  time.textContent=d.toLocaleTimeString('fa-IR');
+  date.textContent=d.toLocaleDateString('fa-IR');
+},1000);
 
-function num(val){return Number((val||'').toString().replace(/,/g,''))||0;}
+// تبدیل مقدار به عدد
+function num(val){ return Number((val||'').toString().replace(/,/g,''))||0; }
 
+// فرمت سه‌رقمی
+function formatMoney(input){
+  let value=input.value.replace(/,/g,'');
+  if(!isNaN(value) && value!=='') input.value=Number(value).toLocaleString();
+}
+
+// اعمال فرمت و محاسبه خودکار کل اولیه
+document.querySelectorAll('.money').forEach(input=>{
+  input.addEventListener('input',function(){
+    formatMoney(this);
+    calculateTotals();
+  });
+});
+area.addEventListener('input',calculateTotals);
+pricePerMeter.addEventListener('input',calculateTotals);
+discountPercent.addEventListener('input',calculateTotals);
+discountAmount.addEventListener('input',calculateTotals);
+
+function calculateTotals(){
+  const areaVal=num(area.value);
+  const priceVal=num(pricePerMeter.value);
+  const totalVal=areaVal*priceVal;
+  total.value=totalVal.toLocaleString();
+  let discountVal=(totalVal*(num(discountPercent.value)/100)||0)+num(discountAmount.value);
+  const finalTotal=totalVal-discountVal;
+  totalAfterDiscount.value=finalTotal.toLocaleString();
+}
+
+// افزودن واریز نقدی
+function addCash(){
+  const row=document.createElement('tr');
+  row.innerHTML=`<td><input class="money cashAmount" type="text" inputmode="numeric" pattern="\d*"></td>
+                   <td><input type="date" class="cashDate"></td>
+                   <td><button class="small-btn" onclick="this.closest('tr').remove();updateCashSum()">✖</button></td>`;
+  document.getElementById('cashRows').appendChild(row);
+  row.querySelector('.cashAmount').addEventListener('input',updateCashSum);
+}
+
+// جمع واریزهای نقدی
+function updateCashSum(){
+  let sum=0;
+  document.querySelectorAll('.cashAmount').forEach(i=>{ sum+=num(i.value); });
+  cashSum.textContent=sum.toLocaleString();
+}
+
+// محاسبه اصلی
 function calc(){
-
   const totalVal=num(totalAfterDiscount.value);
   const deliveryVal=num(delivery.value);
   const docVal=num(doc.value);
   const countVal=Number(count.value)||1;
   const gapVal=Number(gap.value)||1;
 
-  let percentVal;
+  let percentVal=0;
   if(percent.value.trim()===''){
     percentVal=(countVal*gapVal<=6?0.04:countVal*gapVal<=12?0.06:0.08);
     percent.value=(percentVal*100);
-  }else{
-    percentVal=num(percent.value)/100;
-  }
+  }else percentVal=num(percent.value)/100;
 
   let cashTotal=0;
   document.querySelectorAll('.cashAmount').forEach(i=>cashTotal+=num(i.value));
@@ -157,12 +210,12 @@ function calc(){
 
   const equal=Math.round(sum/countVal);
   equalBox.textContent='قسط مساوی: '+equal.toLocaleString()+' تومان';
-  document.getElementById('pEqualInstallment').textContent=equal.toLocaleString();
 
   const totalPayment=cashTotal+deliveryVal+docVal+sum;
   totalPaymentBox.textContent='مبلغ کل پرداختی: '+totalPayment.toLocaleString()+' تومان';
   newPriceBox.textContent='قیمت هر متر جدید: '+Math.round(totalPayment/(num(area.value)||1)).toLocaleString()+' تومان';
 
+  // پرینت
   pArea.textContent=area.value;
   pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=num(total.value).toLocaleString();
@@ -172,15 +225,18 @@ function calc(){
   pDelivery.textContent=deliveryVal.toLocaleString();
   pDoc.textContent=docVal.toLocaleString();
   pInstallmentsList.textContent=text;
+  pEqualInstallment.textContent=equal.toLocaleString();
   pTotalPayment.textContent=totalPayment.toLocaleString();
   pNewPrice.textContent=Math.round(totalPayment/(num(area.value)||1)).toLocaleString();
+  updateCashSum();
 }
 
+// ریست
 function resetAll(){
- document.querySelectorAll('input').forEach(i=>i.value='');
- document.querySelectorAll('#cashRows tr').forEach(r=>r.remove());
- document.querySelectorAll('.print-only span').forEach(e=>e.textContent='');
- netBox.textContent=result.textContent=equalBox.textContent=totalPaymentBox.textContent=newPriceBox.textContent='';
+  document.querySelectorAll('input').forEach(i=>i.value='');
+  document.querySelectorAll('#cashRows tr').forEach(r=>r.remove());
+  document.querySelectorAll('.print-only span, .print-only div').forEach(e=>e.textContent='');
+  netBox.textContent=result.textContent=equalBox.textContent=totalPaymentBox.textContent=newPriceBox.textContent='';
 }
 
 </script>
