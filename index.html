@@ -97,8 +97,10 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 متراژ: <span id="pArea"></span> متر<br>
 قیمت هر متر: <span id="pPrice"></span> تومان<br>
 مبلغ کل اولیه: <span id="pTotal"></span> تومان<br>
-تخفیف درصدی: <span id="pDiscountPercent"></span>%<br>
-تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان<br>
+
+<div id="pDiscountPercentContainer">تخفیف درصدی: <span id="pDiscountPercent"></span>%</div>
+<div id="pDiscountAmountContainer">تخفیف مبلغی: <span id="pDiscountAmount"></span> تومان</div>
+
 مبلغ کل بعد از تخفیف: <span id="pTotalAfterDiscount"></span> تومان<br>
 
 <b>واریزهای نقدی:</b>
@@ -119,9 +121,8 @@ th,td{border:1px solid #ddd;padding:6px;text-align:center}
 <b>قیمت هر متر جدید:</b> <span id="pNewPrice"></span> تومان
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jalaali-js/dist/jalaali.min.js"></script>
 <script>
-// ساعت و تاریخ
+// تاریخ و ساعت
 setInterval(()=>{
   const d=new Date();
   time.textContent=d.toLocaleTimeString('fa-IR');
@@ -176,6 +177,30 @@ function updateCashSum(){
   cashSum.textContent=sum.toLocaleString();
 }
 
+// تبدیل میلادی به شمسی
+function toJalali(dateStr){
+  if(!dateStr) return '-';
+  const g = new Date(dateStr);
+  const j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
+  return `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`;
+}
+
+// بررسی کبیسه
+function isLeap(jy){return ((jy%33==1)||(jy%33==5)||(jy%33==9)||(jy%33==13)||(jy%33==17)||(jy%33==22)||(jy%33==26)||(jy%33==30));}
+
+// افزودن ماه با روز ثابت
+function addMonthsJalaliFixed(dateStr, months){
+  let g = dateStr ? new Date(dateStr+'T00:00') : new Date();
+  let j = jalaali.toJalaali(g.getFullYear(), g.getMonth()+1, g.getDate());
+  let jy = j.jy, jm = j.jm + months, jd = j.jd;
+  jy += Math.floor((jm-1)/12);
+  jm = ((jm-1)%12)+1;
+  let daysInMonth = jm<=6?31:(jm<=11?30:(isLeap(jy)?30:29));
+  if(jd>daysInMonth) jd=daysInMonth;
+  const g2= jalaali.toGregorian(jy,jm,jd);
+  return toJalali(new Date(g2.gy,g2.gm-1,g2.gd).toISOString().split('T')[0]);
+}
+
 // محاسبه اصلی
 function calc(){
   const totalVal=num(totalAfterDiscount.value);
@@ -203,7 +228,8 @@ function calc(){
     let inst=net/countVal;
     inst+=inst*percentVal*i*gapVal;
     sum+=inst;
-    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان\n`;
+    const instDate=addMonthsJalaliFixed(start,(i-1)*gapVal);
+    text+=`قسط ${i}: ${Math.round(inst).toLocaleString()} تومان — تاریخ: ${instDate}\n`;
   }
 
   result.textContent=text;
@@ -220,14 +246,35 @@ function calc(){
   pPrice.textContent=num(pricePerMeter.value).toLocaleString();
   pTotal.textContent=num(total.value).toLocaleString();
   pTotalAfterDiscount.textContent=num(totalAfterDiscount.value).toLocaleString();
-  pDiscountPercent.textContent=num(discountPercent.value);
-  pDiscountAmount.textContent=num(discountAmount.value).toLocaleString();
   pDelivery.textContent=deliveryVal.toLocaleString();
   pDoc.textContent=docVal.toLocaleString();
   pInstallmentsList.textContent=text;
   pEqualInstallment.textContent=equal.toLocaleString();
   pTotalPayment.textContent=totalPayment.toLocaleString();
   pNewPrice.textContent=Math.round(totalPayment/(num(area.value)||1)).toLocaleString();
+
+  // تخفیف هوشمند
+  if(num(discountPercent.value) > 0){
+      document.getElementById('pDiscountPercentContainer').style.display='block';
+      pDiscountPercent.textContent=num(discountPercent.value);
+  }else document.getElementById('pDiscountPercentContainer').style.display='none';
+
+  if(num(discountAmount.value) > 0){
+      document.getElementById('pDiscountAmountContainer').style.display='block';
+      pDiscountAmount.textContent=num(discountAmount.value).toLocaleString();
+  }else document.getElementById('pDiscountAmountContainer').style.display='none';
+
+  // واریزهای نقدی پرینت
+  const pCashBody=document.getElementById('pCashRows');
+  pCashBody.innerHTML='';
+  document.querySelectorAll('#cashRows tr').forEach(r=>{
+    const m=r.querySelector('.cashAmount')?.value;
+    const d=r.querySelector('.cashDate')?.value;
+    if(m && d){
+      pCashBody.innerHTML+=`<tr><td>${num(m).toLocaleString()}</td><td>${toJalali(d)}</td></tr>`;
+    }
+  });
+
   updateCashSum();
 }
 
