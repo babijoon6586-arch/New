@@ -1,135 +1,258 @@
-function printInvoice() {
-
-    const metraj = Number(document.getElementById("metraj").value) || 0;
-    const gheymatHarMetr = Number(document.getElementById("pricePerMeter").value) || 0;
-
-    const mablaghKol = metraj * gheymatHarMetr;
-
-    const darsadTakhfif = Number(document.getElementById("discountPercent").value) || 0;
-    const mablaghTakhfif = Number(document.getElementById("discountAmount").value) || 0;
-
-    const takhfifPercentAmount = (mablaghKol * darsadTakhfif) / 100;
-
-    const mablaghKolBaTakhfif = mablaghKol - takhfifPercentAmount - mablaghTakhfif;
-
-    const tahvil = Number(document.getElementById("tahvil").value) || 0;
-    const sanad = Number(document.getElementById("sanad").value) || 0;
-
-    const cashList = document.querySelectorAll(".cash-amount");
-    const cashDateList = document.querySelectorAll(".cash-date");
-
-    let cashHtml = "";
-    let totalCash = 0;
-
-    cashList.forEach((item, index) => {
-        const amount = Number(item.value) || 0;
-        const date = cashDateList[index].value || "-";
-
-        if (amount > 0) {
-            totalCash += amount;
-
-            cashHtml += `
-            <tr>
-                <td style="border:1px solid #000;padding:4px">${index + 1}</td>
-                <td style="border:1px solid #000;padding:4px">${date}</td>
-                <td style="border:1px solid #000;padding:4px">${formatNumber(amount)}</td>
-            </tr>
-            `;
-        }
-    });
-
-    const installmentsCount = Number(document.getElementById("installmentCount").value) || 0;
-
-    const mablaghGhabelTaghsit =
-        mablaghKolBaTakhfif - totalCash - tahvil - sanad;
-
-    const eachInstallment =
-        installmentsCount > 0
-            ? Math.floor(mablaghGhabelTaghsit / installmentsCount)
-            : 0;
-
-    let installmentsHtml = "";
-    const installmentDates = window.installmentDates || [];
-
-    installmentDates.forEach((date, index) => {
-        installmentsHtml += `
-        <tr>
-            <td style="border:1px solid #000;padding:4px">${index + 1}</td>
-            <td style="border:1px solid #000;padding:4px">${date}</td>
-            <td style="border:1px solid #000;padding:4px">${formatNumber(eachInstallment)}</td>
-        </tr>
-        `;
-    });
-
-    const mablaghKolPardakhti =
-        totalCash +
-        tahvil +
-        sanad +
-        (eachInstallment * installmentsCount);
-
-    const gheymatHarMetrJadid =
-        metraj > 0 ? Math.floor(mablaghKolPardakhti / metraj) : 0;
-
-    const printContent = `
-    <div style="direction:rtl;font-family:tahoma;font-size:12px">
-
-        <p><b>متراژ:</b> ${metraj}</p>
-        <p><b>قیمت هر متر:</b> ${formatNumber(gheymatHarMetr)}</p>
-        <p><b>مبلغ کل اولیه:</b> ${formatNumber(mablaghKol)}</p>
-
-        <p><b>تخفیف درصدی:</b> ${darsadTakhfif} %</p>
-        <p><b>تخفیف مبلغی:</b> ${formatNumber(mablaghTakhfif)}</p>
-
-        <p><b>مبلغ کل بعد از تخفیف:</b> ${formatNumber(mablaghKolBaTakhfif)}</p>
-
-        <h4>مبالغ نقدی</h4>
-        <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <tr>
-                <th style="border:1px solid #000">ردیف</th>
-                <th style="border:1px solid #000">تاریخ</th>
-                <th style="border:1px solid #000">مبلغ</th>
-            </tr>
-            ${cashHtml}
-        </table>
-
-        <p><b>جمع واریز نقدی:</b> ${formatNumber(totalCash)}</p>
-
-        <p><b>تحویل:</b> ${formatNumber(tahvil)}</p>
-        <p><b>سند:</b> ${formatNumber(sanad)}</p>
-
-        <h4>لیست اقساط</h4>
-        <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <tr>
-                <th style="border:1px solid #000">ردیف</th>
-                <th style="border:1px solid #000">تاریخ</th>
-                <th style="border:1px solid #000">مبلغ هر قسط (مساوی)</th>
-            </tr>
-            ${installmentsHtml}
-        </table>
-
-        <p><b>مبلغ کل پرداختی:</b> ${formatNumber(mablaghKolPardakhti)}</p>
-        <p><b>قیمت هر متر جدید:</b> ${formatNumber(gheymatHarMetrJadid)}</p>
-
-    </div>
-    `;
-
-    const newWindow = window.open("", "", "width=800,height=600");
-    newWindow.document.write(`
-        <html>
-        <head>
-            <title>پرینت</title>
-            <style>
-                @media print {
-                    body { margin: 0; }
-                }
-            </style>
-        </head>
-        <body>
-        ${printContent}
-        </body>
-        </html>
-    `);
-
-    newWindow.document.close();
-    newWindow.print();
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>محاسبه قرارداد</title>
+<style>
+body{font-family:tahoma;direction:rtl;padding:20px}
+input{margin:4px;padding:6px}
+button{padding:6px 12px;margin:5px}
+table{border-collapse:collapse;width:100%;margin-top:10px}
+td,th{border:1px solid #000;padding:4px;text-align:center;font-size:12px}
+@media print{
+  body{margin:0}
 }
+</style>
+</head>
+<body>
+
+<h3>اطلاعات ملک</h3>
+
+متراژ:
+<input type="number" id="metraj" inputmode="numeric">
+
+قیمت هر متر:
+<input type="number" id="pricePerMeter" inputmode="numeric">
+
+<hr>
+
+<h3>تخفیف</h3>
+
+تخفیف درصدی:
+<input type="number" id="discountPercent" inputmode="numeric" oninput="updateDiscounts()">
+
+تخفیف مبلغی:
+<input type="number" id="discountAmount" inputmode="numeric" oninput="updateDiscounts()">
+
+<p>مبلغ کل بعد از تخفیف: <span id="totalAfterDiscount">0</span></p>
+
+<hr>
+
+<h3>واریزهای نقدی</h3>
+
+<div id="cashContainer"></div>
+<button type="button" onclick="addCash()">افزودن واریز نقدی</button>
+
+<p>جمع نقدی: <span id="totalCash">0</span></p>
+
+<hr>
+
+تحویل:
+<input type="number" id="tahvil" inputmode="numeric">
+
+سند:
+<input type="number" id="sanad" inputmode="numeric">
+
+<hr>
+
+<h3>اقساط</h3>
+
+تعداد اقساط:
+<input type="number" id="installmentCount" inputmode="numeric" oninput="calculateInstallmentAuto()">
+
+فاصله اقساط (ماه):
+<input type="number" id="installmentGap" inputmode="numeric" oninput="calculateInstallmentAuto()">
+
+<br><br>
+
+تاریخ فاکتور:
+<input type="text" id="invoiceDate" placeholder="1405/01/15">
+
+<br><br>
+
+تاریخ شروع اقساط:
+<input type="text" id="startDate" placeholder="اگر خالی باشد = تاریخ فاکتور">
+
+<p>درصد اقساط: <span id="installmentPercent">0</span>%</p>
+
+<hr>
+
+<button onclick="calculate()">محاسبه</button>
+<button onclick="printInvoice()">پرینت</button>
+<button onclick="resetAll()">ریست</button>
+
+<hr>
+
+<p>مبلغ قابل تقسیط: <span id="ghabelTaghsit">0</span></p>
+<p>مبلغ هر قسط مساوی: <span id="eachInstallment">0</span></p>
+<p>مبلغ کل پرداختی: <span id="totalPaid">0</span></p>
+<p>قیمت هر متر جدید: <span id="newMeterPrice">0</span></p>
+
+<div id="installmentList"></div>
+
+<script>
+
+let installmentDates=[];
+
+function formatNumber(x){
+ return Number(x).toLocaleString('fa-IR')
+}
+
+function updateDiscounts(){
+ let metraj=Number(metrajInput().value)||0;
+ let price=Number(priceInput().value)||0;
+ let total=metraj*price;
+
+ let dPercent=Number(discountPercent.value)||0;
+ let dAmount=Number(discountAmount.value)||0;
+
+ let percentAmount=(total*dPercent)/100;
+ let finalTotal=total-percentAmount-dAmount;
+
+ document.getElementById("totalAfterDiscount").innerText=formatNumber(finalTotal);
+}
+
+function metrajInput(){return document.getElementById("metraj")}
+function priceInput(){return document.getElementById("pricePerMeter")}
+
+function addCash(){
+ let div=document.createElement("div");
+ div.innerHTML=`
+ تاریخ:
+ <input type="text" class="cash-date" placeholder="1405/02/15">
+ مبلغ:
+ <input type="number" class="cash-amount" inputmode="numeric" oninput="updateCashTotal()">
+ `;
+ document.getElementById("cashContainer").appendChild(div);
+}
+
+function updateCashTotal(){
+ let sum=0;
+ document.querySelectorAll(".cash-amount").forEach(i=>{
+   sum+=Number(i.value)||0;
+ });
+ document.getElementById("totalCash").innerText=formatNumber(sum);
+}
+
+function calculateInstallmentAuto(){
+ if(document.getElementById("installmentCount").value)
+ calculate();
+}
+
+function calculate(){
+
+ updateCashTotal();
+ updateDiscounts();
+
+ let finalTotal=Number(
+   document.getElementById("totalAfterDiscount").innerText.replace(/,/g,"")
+ )||0;
+
+ let totalCash=Number(
+   document.getElementById("totalCash").innerText.replace(/,/g,"")
+ )||0;
+
+ let tahvil=Number(document.getElementById("tahvil").value)||0;
+ let sanad=Number(document.getElementById("sanad").value)||0;
+
+ let ghabel=finalTotal-totalCash-tahvil-sanad;
+ if(ghabel<0)ghabel=0;
+
+ document.getElementById("ghabelTaghsit").innerText=formatNumber(ghabel);
+
+ let count=Number(document.getElementById("installmentCount").value)||0;
+ let gap=Number(document.getElementById("installmentGap").value)||0;
+
+ let each=count?Math.floor(ghabel/count):0;
+
+ document.getElementById("eachInstallment").innerText=formatNumber(each);
+
+ let percent=finalTotal?((ghabel/finalTotal)*100):0;
+ document.getElementById("installmentPercent").innerText=percent.toFixed(2);
+
+ generateInstallments(count,gap,each);
+
+ let totalPaid=totalCash+tahvil+sanad+(each*count);
+ document.getElementById("totalPaid").innerText=formatNumber(totalPaid);
+
+ let metraj=Number(metrajInput().value)||0;
+ let newMeter=metraj?Math.floor(totalPaid/metraj):0;
+ document.getElementById("newMeterPrice").innerText=formatNumber(newMeter);
+}
+
+function generateInstallments(count,gap,amount){
+
+ installmentDates=[];
+ let container=document.getElementById("installmentList");
+ container.innerHTML="";
+
+ let start=document.getElementById("startDate").value || document.getElementById("invoiceDate").value;
+ if(!start)return;
+
+ let parts=start.split("/");
+ let y=Number(parts[0]);
+ let m=Number(parts[1]);
+ let d=Number(parts[2]);
+
+ let table="<table><tr><th>ردیف</th><th>تاریخ</th><th>مبلغ</th></tr>";
+
+ for(let i=0;i<count;i++){
+   let newMonth=m+(gap*i);
+   let newYear=y+Math.floor((newMonth-1)/12);
+   newMonth=((newMonth-1)%12)+1;
+
+   let date=newYear+"/"+String(newMonth).padStart(2,"0")+"/"+String(d).padStart(2,"0");
+
+   installmentDates.push(date);
+
+   table+=`<tr><td>${i+1}</td><td>${date}</td><td>${formatNumber(amount)}</td></tr>`;
+ }
+
+ table+="</table>";
+ container.innerHTML=table;
+}
+
+function printInvoice(){
+
+ calculate();
+
+ let content=`
+ <div style="direction:rtl;font-family:tahoma;font-size:12px">
+ <p>متراژ: ${metraj.value}</p>
+ <p>قیمت هر متر: ${formatNumber(pricePerMeter.value)}</p>
+ <p>مبلغ کل اولیه: ${formatNumber(metraj.value*pricePerMeter.value)}</p>
+ <p>تخفیف درصدی: ${discountPercent.value}</p>
+ <p>تخفیف مبلغی: ${formatNumber(discountAmount.value)}</p>
+ <p>مبلغ کل بعد از تخفیف: ${totalAfterDiscount.innerText}</p>
+
+ <h4>مبالغ نقدی</h4>
+ ${document.getElementById("cashContainer").innerHTML}
+
+ <p>تحویل: ${formatNumber(tahvil.value)}</p>
+ <p>سند: ${formatNumber(sanad.value)}</p>
+
+ <h4>لیست اقساط</h4>
+ ${document.getElementById("installmentList").innerHTML}
+
+ <p>مبلغ کل پرداختی: ${totalPaid.innerText}</p>
+ <p>قیمت هر متر جدید: ${newMeterPrice.innerText}</p>
+ </div>
+ `;
+
+ let w=window.open("");
+ w.document.write(content);
+ w.print();
+}
+
+function resetAll(){
+ document.querySelectorAll("input").forEach(i=>i.value="");
+ document.getElementById("cashContainer").innerHTML="";
+ document.getElementById("installmentList").innerHTML="";
+ document.querySelectorAll("span").forEach(s=>s.innerText="0");
+ installmentDates=[];
+}
+
+</script>
+
+</body>
+</html>
